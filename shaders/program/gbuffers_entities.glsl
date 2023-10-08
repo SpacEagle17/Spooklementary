@@ -41,7 +41,7 @@ uniform int frameCounter;
 uniform float viewWidth;
 uniform float viewHeight;
 uniform float nightVision;
-uniform float frameTimeCounter;
+
 
 uniform ivec2 atlasSize;
 
@@ -174,6 +174,9 @@ void main() {
 		#endif
 
 		normalM = gl_FrontFacing ? normalM : -normalM; // Inverted Normal Workaround
+
+		float bloodMoonVisibility = clamp01(1.0 - moonPhase - sunVisibility);
+		ambientColor *= mix(vec3(1.0), vec3(1.0, 0.0, 0.0) * 3.0, bloodMoonVisibility);
 
 		DoLighting(color, shadowMult, playerPos, viewPos, lViewPos, normalM, lmCoordM,
 				   noSmoothLighting, false, false, true,

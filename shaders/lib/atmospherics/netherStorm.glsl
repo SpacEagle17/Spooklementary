@@ -65,6 +65,14 @@ vec4 GetNetherStorm(vec3 color, vec3 translucentMult, vec3 playerPos, vec3 viewP
             wind *= -2.0;
         }
 
+        #ifdef IS_IRIS
+            vec2 lightningAdd = lightningFlashEffect(tracePos - cameraPosition, lightningBoltPosition.xyz, vec3(1.0), 150.0) * lightningBoltPosition.w * 8.0;
+            netherStorm.rgb += lightningAdd.y;
+        #else
+            vec2 lightningAdd = lightningFlashEffect(tracePos - cameraPosition, vec3(0.0, exp(1.0) - 1000.0, 0.0), vec3(1.0), 80.0) * lightningFlashOptifine * 10.0;
+            netherStorm.rgb += lightningAdd.y;
+        #endif
+
         if (lTracePos > lViewPos) netherStorm.rgb *= translucentMultM;
     }
 

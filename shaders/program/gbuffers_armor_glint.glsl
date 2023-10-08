@@ -50,7 +50,7 @@ flat out vec4 glColor;
 
 //Uniforms//
 #if HAND_SWAYING > 0
-	uniform float frameTimeCounter;
+	
 #endif
 
 //Attributes//

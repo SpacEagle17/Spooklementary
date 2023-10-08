@@ -234,3 +234,42 @@ vec3 smoothstep1(vec3 x) {
 vec4 smoothstep1(vec4 x) {
     return x * x * (3.0 - 2.0 * x);
 }
+
+vec2 lightningFlashEffect(vec3 playerPos, vec3 lightningBoltPosition, vec3 normal, float lightDistance){ // Thanks to Xonk!
+    // i like to offset the y of lightningBoltPosition to be ~100 blocks higher to give the effect of the light coming off the entire bolt, not just the point it hits.
+    vec3 LightningPos = playerPos - vec3(lightningBoltPosition.x, max(playerPos.y, lightningBoltPosition.y), lightningBoltPosition.z);
+
+    // point light, max distance is ~500 blocks (the maximum entity render distance), change lightDistance to change the reach
+    float lightningLight = max(1.0 - length(LightningPos) / lightDistance, 0.0);
+
+    // the light above ^^^ is a linear curve. me no likey. here's an exponential one instead.
+    lightningLight = exp((1.0 - lightningLight) * -15.0);
+
+    // good old NdotL
+    float NdotL = clamp(dot(LightningPos, -normal), 0.0, 1.0);
+
+    return vec2(lightningLight * NdotL, lightningLight);
+}
+
+float hash1( uint n ){
+    // The MIT License
+    // Copyright © 2017 Inigo Quilez
+    // Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions: The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+    // integer hash copied from Hugo Elias
+	n = (n << 13U) ^ n;
+    n = n * (n * n * 15731U + 789221U) + 1376312589U;
+    return float( n & uint(0x7fffffffU))/float(0x7fffffff);
+}
+
+float hash1(const in int p) {return hash1(uint(p));}
+
+float hash13(vec3 p3){
+    // The MIT License
+    // Copyright (c)2014 David Hoskins.
+    // Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions: The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+	p3  = fract(p3 * .1031);
+    p3 += dot(p3, p3.zyx + 31.32);
+    return fract((p3.x + p3.y) * p3.z);
+}

@@ -39,7 +39,7 @@ uniform int frameCounter;
 uniform float viewWidth;
 uniform float viewHeight;
 uniform float nightVision;
-uniform float frameTimeCounter;
+
 
 uniform vec3 skyColor;
 uniform vec3 cameraPosition;
@@ -164,6 +164,9 @@ void main() {
 			#endif
 		#endif
 
+		float bloodMoonVisibility = clamp01(1.0 - moonPhase - sunVisibility);
+		ambientColor *= mix(vec3(1.0), vec3(1.0, 0.0, 0.0) * 3.0, bloodMoonVisibility);
+
 		DoLighting(color, shadowMult, playerPos, viewPos, 0.0, normalM, lmCoordM,
 				   noSmoothLighting, false, false, false,
 				   0, smoothnessG, highlightMult, emission);
@@ -226,7 +229,7 @@ out vec4 glColor;
 
 //Uniforms//
 #if HAND_SWAYING > 0
-	uniform float frameTimeCounter;
+	
 #endif
 
 //Attributes//

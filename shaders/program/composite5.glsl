@@ -20,7 +20,7 @@ uniform int frameCounter;
 uniform float viewWidth, viewHeight;
 uniform float darknessFactor;
 
-uniform float frameTimeCounter;
+
 
 uniform sampler2D colortex0;
 uniform sampler2D noisetex;
@@ -82,6 +82,45 @@ void DoBSLTonemap(inout vec3 color) {
 	color = pow(color, mix(vec3(T_LOWER_CURVE), vec3(T_UPPER_CURVE), sqrt(color)));
 	
 	color = pow(color, vec3(1.0 / 2.2));
+}
+
+void linearToRGB(inout vec3 color) {
+	const vec3 k = vec3(0.055);
+	color = mix((vec3(1.0) + k) * pow(color, vec3(1.0 / 2.4)) - k, 12.92 * color, lessThan(color, vec3(0.0031308)));
+}
+
+void doColorAdjustments(inout vec3 color) {
+	color = (T_EXPOSURE - 0.40) * color;
+	// color = color / pow(pow(color, vec3(TM_WHITE_CURVE * 0.5)) + 1.0, vec3(1.0 / (TM_WHITE_CURVE * 0.5)));
+	color = pow(color, mix(vec3(T_LOWER_CURVE - 0.20), vec3(T_UPPER_CURVE - 0.30), sqrt(color)));
+}
+
+vec3 LottesTonemap(vec3 color) {
+	// Lottes 2016, "Advanced Techniques and Optimization of HDR Color Pipelines"
+	// http://32ipi028l5q82yhj72224m8j.wpengine.netdna-cdn.com/wp-content/uploads/2016/03/GdcVdrLottes.pdf
+    const vec3 a 	  = vec3(1.3);
+    const vec3 d 	  = vec3(0.95);
+    const vec3 hdrMax = vec3(8.0);
+    const vec3 midIn  = vec3(0.25);
+    const vec3 midOut = vec3(0.25);
+
+	const vec3 a_d = a * d;
+    const vec3 hdrMaxA = pow(hdrMax, a);
+    const vec3 hdrMaxAD = pow(hdrMax, a_d);
+    const vec3 midInA = pow(midIn, a);
+    const vec3 midInAD = pow(midIn, a_d);
+	const vec3 HM1 = hdrMaxA * midOut;
+	const vec3 HM2 = hdrMaxAD - midInAD;
+
+    const vec3 b = (-midInA + HM1) / (HM2 * midOut);
+    const vec3 c = (hdrMaxAD * midInA - HM1 * midInAD) / (HM2 * midOut);
+	
+    color = pow(color, a) / (pow(color, a_d) * b + c);
+
+	doColorAdjustments(color);
+
+	linearToRGB(color);
+	return color;
 }
 
 void DoBSLColorSaturation(inout vec3 color) {
@@ -196,7 +235,7 @@ void main() {
 		color *= 0.01;
 	#endif
 
-	DoBSLTonemap(color);
+	color = LottesTonemap(color);
 
 	#if defined GREEN_SCREEN_LIME || SELECT_OUTLINE == 4
 		int materialMaskInt = int(texelFetch(colortex1, texelCoord, 0).g * 255.1);

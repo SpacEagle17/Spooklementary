@@ -75,6 +75,8 @@
 
             #define WATER_BUMPINESS_M WATER_BUMPINESS * 0.8
 
+            float rainWaterStrength = mix(1.0, 2.5, rainFactor);
+
             #if WATER_STYLE >= 2
                 waterPosM *= 2.5; wind *= 2.5;
 
@@ -92,7 +94,7 @@
                      normalBig += texture2D(gaux4, waterPosM * 0.05 - 0.05 * wind).rg - 0.5;
 
                 normalMap.xy = normalMed * WATER_BUMP_MED + normalSmall * WATER_BUMP_SMALL + normalBig * WATER_BUMP_BIG;
-                normalMap.xy *= 12.0 * (1.0 - fresnel) * WATER_BUMPINESS_M;
+                normalMap.xy *= 12.0 * (1.0 - fresnel) * WATER_BUMPINESS_M * rainWaterStrength;
             #endif
 
             normalMap.xy *= 0.03 * lmCoordM.y + 0.01;

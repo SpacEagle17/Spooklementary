@@ -29,7 +29,7 @@ vec3 GetSky(float VdotU, float VdotS, float dither, bool doGlare, bool doGround)
         float VdotUM1 = pow2(1.0 - VdotUmax0);
               VdotUM1 = pow(VdotUM1, 1.0 - VdotSM2 * 0.4);
               VdotUM1 = mix(VdotUM1, 1.0, rainFactor2 * 0.15);
-        vec3 finalSky = mix(upColor, middleColor, VdotUM1);
+        vec3 finalSky = mix(upColor, middleColor * 0.8, VdotUM1);
 
         // Add sunset color
         float VdotUM2 = pow2(1.0 - abs(VdotU));
@@ -42,7 +42,7 @@ vec3 GetSky(float VdotU, float VdotS, float dither, bool doGlare, bool doGround)
               VdotUM3 = smoothstep1(VdotUM3);
         vec3 scatteredGroundMixer = vec3(VdotUM3 * VdotUM3, sqrt1(VdotUM3), sqrt3(VdotUM3));
              scatteredGroundMixer = mix(vec3(VdotUM3), scatteredGroundMixer, 0.75 - 0.5 * rainFactor);
-        finalSky = mix(finalSky, downColor, scatteredGroundMixer);
+        finalSky = mix(finalSky, downColor, scatteredGroundMixer * 0.2);
     //
 
     // Sky Ground
@@ -66,8 +66,12 @@ vec3 GetSky(float VdotU, float VdotS, float dither, bool doGlare, bool doGround)
             glare *= 1.0 - rainFactor * 0.5;
 
             float glareWaterFactor = isEyeInWater * sunVisibility;
-            vec3 glareColor = mix(vec3(0.38, 0.4, 0.5) * 0.7, vec3(0.5), sunVisibility);
+            vec3 moonGlareColor = vec3(0.502, 0.3804, 0.3804);
+            float bloodMoonVisibility = clamp01(1.0 - moonPhase - sunVisibility);
+            moonGlareColor = mix(moonGlareColor, vec3(1.0, 0.0, 0.0) * 1.5, bloodMoonVisibility);
+            vec3 glareColor = mix(moonGlareColor * 0.7, vec3(0.5), sunVisibility);
                  glareColor = glareColor + glareWaterFactor * vec3(7.0);
+            glare *= 0.5;
 
             finalSky += glare * shadowTime * glareColor;
         }

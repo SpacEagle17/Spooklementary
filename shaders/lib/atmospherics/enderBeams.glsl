@@ -48,6 +48,12 @@ vec3 DrawEnderBeams(float VdotU, vec3 playerPos) {
         gradientMix += 1.0;
     }
 
+    #ifdef IS_IRIS
+            beams.rgb += 0.2 * lightningBoltPosition.w;
+    #else
+        beams.rgb += 0.3 * lightningFlashOptifine;
+    #endif
+
     beams.rgb *= beams.a * beams.a * beams.a * 3.5;
     beams.rgb = sqrt(beams.rgb);
 

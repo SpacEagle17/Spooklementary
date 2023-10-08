@@ -57,7 +57,8 @@ float fbmCloud2(vec2 inCoord, float minimum){
 }
 
 vec3 GetNightNebula(vec3 viewPos, float VdotU, float VdotS) {
-    float nebulaFactor = pow2(max0(VdotU) * min1(nightFactor * 2.0)) * invRainFactor;
+    float nebulaFactor = pow2(max0(VdotU) * min1(nightFactor * 2.0));
+	nebulaFactor *= mix(1.0, invRainFactor, heightRelativeToCloud);
     if (nebulaFactor < 0.001) return vec3(0.0);
 
     vec2 UV = GetStarCoord(viewPos, 0.5);

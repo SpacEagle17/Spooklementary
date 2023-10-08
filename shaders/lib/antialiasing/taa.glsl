@@ -132,6 +132,12 @@ void DoTAA(inout vec3 color, inout vec3 temp, float depth) {
 	float blendConstant = 0.7;
 	float velocityFactor = dot(velocity, velocity) * 10.0;
 	blendFactor *= max(exp(-velocityFactor) * blendVariable + blendConstant - length(cameraOffset) * edge, blendMinimum);
+
+	#ifdef IS_IRIS
+		if (lightning > 0.0) blendFactor = 0.0;
+	#else
+		if (lightningFlashOptifine > 0.0) blendFactor = 0.0;
+	#endif
 	
 	color = mix(color, tempColor, blendFactor);
 	temp = color;

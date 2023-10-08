@@ -67,9 +67,7 @@ float shadowTime = shadowTimeVar2 * shadowTimeVar2;
     #include "/lib/atmospherics/fog/caveFactor.glsl"
 #endif
 
-#ifdef ATM_COLOR_MULTS
-    #include "/lib/colors/colorMultipliers.glsl"
-#endif
+#include "/lib/colors/colorMultipliers.glsl"
 
 #ifdef COLOR_CODED_PROGRAMS
 	#include "/lib/misc/colorCodedPrograms.glsl"
@@ -124,7 +122,7 @@ void main() {
 						sunMoonMixer *= 1.0 - 0.65 * GetCaveFactor();
 					#endif
 
-					color.rgb = mix(color.rgb, vec3(0.9, 0.5, 0.3) * 10.0, sunMoonMixer);
+					color.rgb = mix(color.rgb, vec3(0.9, 0.5, 0.3) * 7.0, sunMoonMixer);
 				} else {
 					float horizonFactor = GetHorizonFactor(-SdotU);
 					sunMoonMixer = max0(sunMoonMixer - 0.25) * 1.33333 * horizonFactor;
@@ -134,7 +132,11 @@ void main() {
 					                + texture2D(noisetex, starCoord * 2.5).g * 0.7
 					                + texture2D(noisetex, starCoord * 5.0).g * 0.5;
 					moonNoise = max0(moonNoise - 0.75) * 1.7;
-					vec3 moonColor = vec3(0.38, 0.4, 0.5) * (1.2 - (0.2 + 0.2 * sqrt1(nightFactor)) * moonNoise);
+					vec3 moonColorSpooky = vec3(0.38, 0.4, 0.5);
+					float bloodMoonVisibility = clamp01(1.0 - moonPhase - sunVisibility);
+					float moonNoiseIntensity = mix(1.0, 1.5, bloodMoonVisibility);
+					moonColorSpooky = mix(vec3(0.38, 0.4, 0.5), vec3(1.0, 0.0, 0.0), bloodMoonVisibility);
+					vec3 moonColor = moonColorSpooky * (1.2 - (0.2 + 0.2 * sqrt1(nightFactor)) * moonNoise * moonNoiseIntensity);
 
 					if (moonPhase >= 1) {
 						float moonPhaseOffset = 0.0;
@@ -167,9 +169,7 @@ void main() {
 	} else discard;
 	#endif
 
-    #ifdef ATM_COLOR_MULTS
-        color.rgb *= GetAtmColorMult();
-    #endif
+	color.rgb *= GetAtmColorMult();
 
 	if (max(blindness, darknessFactor) > 0.1) color.rgb = vec3(0.0);
 

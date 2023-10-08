@@ -15,6 +15,8 @@ in vec2 lmCoord;
 in vec2 signMidCoordPos;
 flat in vec2 absMidCoordPos;
 flat in vec2 midCoord;
+in vec3 blockUV;
+in vec3 atMidBlock;
 
 flat in vec3 upVec, sunVec, northVec, eastVec;
 in vec3 normal;
@@ -38,7 +40,7 @@ uniform int frameCounter;
 uniform float viewWidth;
 uniform float viewHeight;
 uniform float nightVision;
-uniform float frameTimeCounter;
+
 
 uniform vec3 skyColor;
 uniform vec3 cameraPosition;
@@ -96,6 +98,7 @@ float sunVisibility2 = sunVisibility * sunVisibility;
 float shadowTimeVar1 = abs(sunVisibility - 0.5) * 2.0;
 float shadowTimeVar2 = shadowTimeVar1 * shadowTimeVar1;
 float shadowTime = shadowTimeVar2 * shadowTimeVar2;
+float skyLightCheck = 0.0;
 
 vec4 glColor = glColorRaw;
 
@@ -169,6 +172,7 @@ void DoOceanBlockTweaks(inout float smoothnessD) {
 
 //Program//
 void main() {
+	skyLightCheck = pow2(1.0 - min1(lmCoord.y * 2.9 * sunVisibility));
 	vec4 color = texture2D(tex, texCoord);
 
 	float smoothnessD = 0.0, materialMask = 0.0, skyLightFactor = 0.0;
@@ -190,11 +194,36 @@ void main() {
 	float lViewPos = length(viewPos);
 	vec3 playerPos = ViewToPlayer(viewPos);
 
+	vec3 worldPos = playerPos + cameraPosition;
+
 	int subsurfaceMode = 0;
 	bool noSmoothLighting = false, noDirectionalShading = false, noVanillaAO = false, centerShadowBias = false, noGeneratedNormals = false;
 	float smoothnessG = 0.0, highlightMult = 1.0, emission = 0.0, noiseFactor = 1.0, snowMinNdotU = 0.0, snowFactor = 1.0, noPuddles = 0.0;
 	vec2 lmCoordM = lmCoord;
 	vec3 shadowMult = vec3(1.0);
+
+	vec3 eyes1 = vec3(0.0);
+	vec3 eyes2 = vec3(0.0);
+	float sideRandom = hash13(mod(floor(worldPos + atMidBlock / 64) + frameTimeCounter * 0.00001, vec3(100)));
+	vec3 blockUVM = blockUV;
+	if(step(0.5, sideRandom) > 0.0) { // Randomly make eyes visible only on either the x or z axis
+		blockUVM.x = 0.0;
+	} else {
+		blockUVM.z = 0.0;
+	}
+	float spookyEyesFrequency = 1.0;
+	float spookyEyesSpeed = 1.0;
+
+	float randomEyesTime = 24000 * hash1(worldDay * 3); // Effect happens randomly throughout the day
+	int moreEyesEffect = (int(hash1(worldDay / 2)) % (2 * 24000)) + int(randomEyesTime);
+	if (worldTime > moreEyesEffect && worldTime < moreEyesEffect + 30) { // 30 in ticks - 1.5s, how long the effect will be on
+		spookyEyesFrequency = 20.0; // make eyes appear everywhere
+	}
+	if((blockUVM.x > 0.15 && blockUVM.x < 0.43 || blockUVM.x < 0.85 && blockUVM.x > 0.57 || blockUVM.z > 0.15 && blockUVM.z < 0.43 || blockUVM.z < 0.85 && blockUVM.z > 0.57) && blockUVM.y > 0.42 && blockUVM.y < 0.58 && abs(clamp01(dot(normal, upVec))) < 0.99) eyes1 = vec3(1.0); // Eye Shape 1 Horizontal
+	if((blockUVM.x > 0.65 && blockUVM.x < 0.8 || blockUVM.x < 0.35 && blockUVM.x > 0.2 || blockUVM.z > 0.65 && blockUVM.z < 0.8 || blockUVM.z < 0.35 && blockUVM.z > 0.2) && blockUVM.y > 0.3 && blockUVM.y < 0.7 && abs(clamp01(dot(normal, upVec))) < 0.99) eyes2 = vec3(1.0); // Eye Shape 2 Vertical
+	vec3 spookyEyes = mix(eyes1, eyes2, step(0.75, hash13(mod(floor(worldPos + atMidBlock / 64) + frameTimeCounter * 0.00005, vec3(100))))); // have either eye shape 1 or 2 randomly, the horizontal ones have a 0.75 to 0.25 higher probability of appearing
+	spookyEyes *= vec3(step(1.0075 - spookyEyesFrequency * 0.01, hash13(mod(floor(worldPos + atMidBlock / 64) + frameTimeCounter * 0.0000005 * spookyEyesSpeed, vec3(100))))); // Make them appear randomly and much less
+
 	#ifdef IPBR
 		vec3 maRecolor = vec3(0.0);
 		#include "/lib/materials/materialHandling/terrainMaterials.glsl"
@@ -229,6 +258,9 @@ void main() {
 		} else if (mat == 10744) { // Cobweb
 			subsurfaceMode = 1, noSmoothLighting = true, noDirectionalShading = true;
 			centerShadowBias = true;
+		} else if (mat == 10396){ // Jack o'Lantern
+			float noiseAdd = hash13(mod(floor(worldPos + atMidBlock / 64) + frameTimeCounter * 0.000001, vec3(100)));
+			emission *= mix(0.0, 1.0, smoothstep(0.2, 1.0, texture2D(noisetex, vec2(frameTimeCounter * 0.04 + noiseAdd)).r));
 		}
 
 		#ifdef SNOWY_WORLD
@@ -264,6 +296,7 @@ void main() {
 	#if RAIN_PUDDLES >= 1
 		float puddleLightFactor = max0(lmCoord.y * 32.0 - 31.0) * clamp((1.0 - 1.15 * lmCoord.x) * 10.0, 0.0, 1.0);
 		float puddleNormalFactor = pow2(max0(NdotUmax0 - 0.5) * 2.0);
+		puddleNormalFactor *= mix(0.0, 1.0, heightRelativeToCloud);
 		float puddleMixer = puddleLightFactor * inRainy * puddleNormalFactor;
 		if (pow2(pow2(wetness)) * puddleMixer - noPuddles > 0.00001) {
 			vec2 worldPosXZ = playerPos.xz + cameraPosition.xz;
@@ -309,6 +342,9 @@ void main() {
 		#include "/lib/misc/showLightLevels.glsl"
 	#endif
 
+	float bloodMoonVisibility = clamp01(1.0 - moonPhase - sunVisibility);
+	ambientColor *= mix(vec3(1.0), vec3(1.0, 0.0, 0.0) * 3.0, bloodMoonVisibility);
+
 	DoLighting(color, shadowMult, playerPos, viewPos, lViewPos, normalM, lmCoordM,
 				noSmoothLighting, noDirectionalShading, noVanillaAO, centerShadowBias,
 				subsurfaceMode, smoothnessG, highlightMult, emission);
@@ -316,6 +352,11 @@ void main() {
 	#ifdef IPBR
 		color.rgb += maRecolor;
 	#endif
+
+	vec2 flickerEyeNoise = texture2D(noisetex, vec2(frameTimeCounter * 0.025 + hash13(mod(floor(worldPos + atMidBlock / 64) + frameTimeCounter * 0.000001, vec3(100))))).rb;
+	if (length(playerPos) > 8.0) {
+		color.rgb += spookyEyes * 3.0 * skyLightCheck * min1(max(flickerEyeNoise.r, flickerEyeNoise.g)) * clamp((1.0 - 1.15 * lmCoord.x) * 10.0, 0.0, 1.0);
+	}
 
 	#ifdef PBR_REFLECTIONS
 		#ifdef OVERWORLD
@@ -328,6 +369,14 @@ void main() {
 	#ifdef COLOR_CODED_PROGRAMS
 		ColorCodeProgram(color);
 	#endif
+
+	int seed = worldDay / 2; // Thanks to Bálint
+	int currTime = (worldDay % 2) * 24000 + worldTime; // Effect happens every 2 minecraft days
+	float randomTime = 24000 * hash1(worldDay * 5); // Effect happens randomly throughout the day
+	int timeWhenItHappens = (int(hash1(seed)) % (2 * 24000)) + int(randomTime);
+	if (currTime > timeWhenItHappens && currTime < timeWhenItHappens + 100) { // 100 in ticks - 5s, how long the effect will be on, aka leaves are gone
+		if (mat == 10007 || mat == 10008) discard; // disable leaves
+	}
 
 	/* DRAWBUFFERS:01 */
 	gl_FragData[0] = color;
@@ -351,6 +400,8 @@ out vec2 lmCoord;
 out vec2 signMidCoordPos;
 flat out vec2 absMidCoordPos;
 flat out vec2 midCoord;
+out vec3 blockUV; // useful to hardcode something to a specific pixel coordinate of a block
+out vec3 atMidBlock;
 
 flat out vec3 upVec, sunVec, northVec, eastVec;
 out vec3 normal;
@@ -373,7 +424,7 @@ out vec4 glColorRaw;
 #endif
 
 #ifdef WAVING_ANYTHING_TERRAIN
-	uniform float frameTimeCounter;
+	
 
 	uniform vec3 cameraPosition;
 
@@ -383,6 +434,7 @@ out vec4 glColorRaw;
 //Attributes//
 attribute vec4 mc_Entity;
 attribute vec4 mc_midTexCoord;
+attribute vec3 at_midBlock;
 
 #if RAIN_PUDDLES >= 1 || defined GENERATED_NORMALS || defined CUSTOM_PBR
 	attribute vec4 at_tangent;
@@ -406,6 +458,8 @@ vec4 glColor = vec4(1.0);
 void main() {
 	texCoord = (gl_TextureMatrix[0] * gl_MultiTexCoord0).xy;
 	lmCoord  = GetLightMapCoordinates();
+	blockUV = 0.5 - at_midBlock / 64.0;
+	atMidBlock = at_midBlock;
 
 	glColorRaw = gl_Color;
 	if (glColorRaw.a < 0.1) glColorRaw.a = 1.0;

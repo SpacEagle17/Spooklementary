@@ -457,12 +457,6 @@ option.NIGHT_STAR_AMOUNT.comment=Determines the amount of stars in the night sky
 value.NIGHT_STAR_AMOUNT.2=Medium
 value.NIGHT_STAR_AMOUNT.3=High
 
-option.RAINBOWS=Rainbows
-option.RAINBOWS.comment=Enables rainbows that appear at the opposite side of the sun during the morning/evening.
-value.RAINBOWS.0=OFF
-value.RAINBOWS.1=After Rain
-value.RAINBOWS.3=Always
-
 option.AURORA_STYLE_DEFINE=Aurora Borealis Style
 option.AURORA_STYLE_DEFINE.comment=Determines the style of northern lights that appear in the night sky.
 value.AURORA_STYLE_DEFINE.-1=Default Style

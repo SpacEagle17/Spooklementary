@@ -15,7 +15,7 @@ vec2 GetStarCoord(vec3 viewPos, float sphereness) {
 vec3 GetStars(vec2 starCoord, float VdotU, float VdotS) {
     if (VdotU < 0.0) return vec3(0.0);
 
-    starCoord *= 0.2;
+    starCoord *= 0.4;
     float starFactor = 1024.0;
     starCoord = floor(starCoord * starFactor) / starFactor;
 
@@ -25,7 +25,8 @@ vec3 GetStars(vec2 starCoord, float VdotU, float VdotS) {
     star *= GetStarNoise(starCoord.xy+0.23);
 
     #if NIGHT_STAR_AMOUNT == 2
-        star -= 0.7;
+    star -= 0.5;
+    star *= 0.55;
     #else
         star -= 0.6;
         star *= 0.65;
@@ -37,7 +38,10 @@ vec3 GetStars(vec2 starCoord, float VdotU, float VdotS) {
     star *= starFogFactor * (1.0 - sunVisibility);
     star *= max0(1.0 - pow(abs(VdotS) * 1.002, 100.0));
 
-    vec3 stars = 40.0 * star * vec3(0.38, 0.4, 0.5) * invRainFactor;
+    vec3 stars = 40.0 * star * vec3(0.38, 0.4, 0.5) * 2.0;
+    stars *= mix(1.0, invRainFactor, heightRelativeToCloud);
+
+    stars *= clamp(abs(texture2D(noisetex, starCoord + frameTimeCounter * 0.004).r - 0.5) * 10, 0.5, 1.0);
 
     return stars;
 }

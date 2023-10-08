@@ -37,6 +37,7 @@ vec3 highlightColor = normalize(pow(lightColor, vec3(0.37))) * (0.3 + 1.5 * sunV
 void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 viewPos, float lViewPos, vec3 normalM, vec2 lightmap,
                 bool noSmoothLighting, bool noDirectionalShading, bool noVanillaAO, bool centerShadowBias,
                 int subsurfaceMode, float smoothnessG, float highlightMult, float emission) {
+    lightmap.x *= 0.85;
     float lightmapY2 = pow2(lightmap.y);
     float lightmapYM = smoothstep1(lightmap.y);
     float subsurfaceHighlight = 0.0;
@@ -47,6 +48,15 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
 
     #if defined LIGHT_COLOR_MULTS && !defined GBUFFERS_WATER // lightColorMult is defined early in gbuffers_water
         lightColorMult = GetLightColorMult();
+    #endif
+
+     vec3 normalLighting = ViewToPlayer(normal);
+    #ifdef IS_IRIS
+        vec2 lightningAdd = lightningFlashEffect(playerPos, lightningBoltPosition.xyz, normalLighting, 450.0) * lightningBoltPosition.w * 5.0;
+        ambientColorM += lightningAdd.x;
+    #else
+        vec2 lightningAdd = lightningFlashEffect(playerPos, vec3(0.0), normalLighting, 450.0) * lightningFlashOptifine * 5.0;
+        ambientColorM += lightningAdd.x;
     #endif
 
     #ifdef OVERWORLD
@@ -302,12 +312,8 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
     #if HELD_LIGHTING_MODE >= 1
         float heldLight = max(heldBlockLightValue, heldBlockLightValue2);
         float lViewPosL = lViewPos;
-        #if HELD_LIGHTING_MODE == 1
-            heldLight *= 0.75;
-            lViewPosL *= 1.5;
-        #elif HELD_LIGHTING_MODE == 2
-            heldLight *= 0.97;
-        #endif
+        heldLight *= 1.1;
+        lViewPosL *= 2.5;
         lightmap.x = max(lightmap.x, (heldLight - lViewPosL) * 0.066666);
     #endif
     float lightmapXM;
@@ -317,16 +323,22 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
         lightmapXM = pow(lightmapXMSteep + lightmapXMCalm, 2.25);
     } else lightmapXM = pow2(lightmap.x) * lightmap.x * 10.0;
 
+    vec2 flickerNoise = texture2D(noisetex, vec2(frameTimeCounter * 0.06)).rb;
+    lightmapXM *= mix(1.0, min1(max(flickerNoise.r, flickerNoise.g) * 1.7), 0.7);
+
     // Minimum Light
+    float fadeDistance = max(1.0 - length(playerPos) / 80, 0.0);
+    fadeDistance = exp((1.0 - fadeDistance) * -15.0) * (1.0 - nightVision) + nightVision;
+
     #if !defined END && MINIMUM_LIGHT_MODE > 0
         #if MINIMUM_LIGHT_MODE == 1
-            vec3 minLighting = vec3(0.0036);
+            vec3 minLighting = vec3(0.0036) * fadeDistance;
         #elif MINIMUM_LIGHT_MODE == 2
-            vec3 minLighting = vec3(0.005625 + vsBrightness * 0.043);
+            vec3 minLighting = vec3(0.005625 + vsBrightness * 0.043) * fadeDistance;
         #elif MINIMUM_LIGHT_MODE == 3
-            vec3 minLighting = vec3(0.0625);
+            vec3 minLighting = vec3(0.0625) * fadeDistance;
         #elif MINIMUM_LIGHT_MODE == 4
-            vec3 minLighting = vec3(0.25);
+            vec3 minLighting = vec3(0.25) * fadeDistance;
         #endif
 
         minLighting *= 1.0 - lightmapYM; //AAA
@@ -349,7 +361,7 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
         #if AMBIENT_MULT != 100
             #define AMBIENT_MULT_M (AMBIENT_MULT - 100) * 0.006
             vec3 shadowMultP = shadowMult / (0.1 + 0.9 * sqrt2(max0(NdotLM)));
-            ambientMult *= 1.0 + pow2(pow2(max0(1.0 - dot(shadowMultP, shadowMultP)))) * AMBIENT_MULT_M *
+            ambientMult *= 1.0 + pow2(pow2(max0(1.0 - dot(shadowMultP, shadowMultP)))) * -0.25 *
                            (0.5 + 0.2 * sunFactor + 0.8 * noonFactor) * (1.0 - rainFactor * 0.5);
         #endif
 
@@ -475,6 +487,8 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
         #ifdef MOON_PHASE_INF_REFLECTION
             lightHighlight *= pow2(moonPhaseInfluence);
         #endif
+
+        lightHighlight *= 0.3;
     #endif
 
     // Mix Colors

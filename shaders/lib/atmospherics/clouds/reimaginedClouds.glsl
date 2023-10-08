@@ -1,7 +1,7 @@
 #include "/lib/atmospherics/clouds/cloudCoord.glsl"
 
 const float cloudStretch = 5.5;
-const float cloudHeight  = cloudStretch * 2.0;
+const float cloudHeightShader  = cloudStretch * 2.0;
 
 bool GetCloudNoise(vec3 tracePos, inout vec3 tracePosM, int cloudAltitude) {
     tracePosM = ModifyTracePos(tracePos, cloudAltitude);
@@ -68,7 +68,7 @@ vec4 GetVolumetricClouds(int cloudAltitude, float distanceThreshold, inout float
                 }
             #endif
 
-            float cloudShading = 1.0 - (higherPlaneAltitude - tracePos.y) / cloudHeight;
+            float cloudShading = 1.0 - (higherPlaneAltitude - tracePos.y) / cloudHeightShader;
             float VdotSM1 = max0(sunVisibility > 0.5 ? VdotS : - VdotS);
 
             #if CLOUD_QUALITY >= 2
@@ -92,6 +92,13 @@ vec4 GetVolumetricClouds(int cloudAltitude, float distanceThreshold, inout float
             #endif
             
             vec3 colorSample = cloudAmbientColor + cloudLightColor * (0.07 + cloudShading);
+            #ifdef IS_IRIS
+                vec2 lightningAdd = lightningFlashEffect(tracePos - cameraPosition, lightningBoltPosition.xyz, vec3(1.0), 450.0) * lightningBoltPosition.w * 10.0;
+                colorSample += lightningAdd.y;
+            #else
+                vec2 lightningAdd = lightningFlashEffect(tracePos - cameraPosition, vec3(0.0, exp(1.0) - 1000.0, 0.0), vec3(1.0), 450.0) * lightningFlashOptifine * 10.0;
+                colorSample += lightningAdd.y;
+            #endif
             vec3 cloudSkyColor = GetSky(VdotU, VdotS, dither, true, false);
             float cloudFogFactor = clamp((distanceThreshold - lTracePosXZ) / distanceThreshold, 0.0, 0.75);
             float skyMult1 = 1.0 - 0.2 * (1.0 - skyFade) * max(sunVisibility2, nightFactor);

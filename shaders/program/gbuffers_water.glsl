@@ -41,7 +41,7 @@ uniform float far;
 uniform float nightVision;
 uniform float blindness;
 uniform float darknessFactor;
-uniform float frameTimeCounter;
+
 
 uniform vec3 skyColor;
 uniform vec3 cameraPosition;
@@ -156,9 +156,7 @@ float GetLinearDepth(float depth) {
 	#include "/lib/materials/materialHandling/customMaterials.glsl"
 #endif
 
-#ifdef ATM_COLOR_MULTS
-    #include "/lib/colors/colorMultipliers.glsl"
-#endif
+#include "/lib/colors/colorMultipliers.glsl"
 
 #ifdef COLOR_CODED_PROGRAMS
 	#include "/lib/misc/colorCodedPrograms.glsl"
@@ -186,9 +184,7 @@ void main() {
     #ifdef LIGHT_COLOR_MULTS
         lightColorMult = GetLightColorMult();
     #endif
-	#ifdef ATM_COLOR_MULTS
-		atmColorMult = GetAtmColorMult();
-	#endif
+	atmColorMult = GetAtmColorMult();
 
 	#ifdef VL_CLOUDS_ACTIVE
 		float cloudLinearDepth = texelFetch(gaux1, texelCoord, 0).r;
@@ -246,6 +242,9 @@ void main() {
 		translucentMult = vec4(mix(vec3(0.666), color.rgb * (1.0 - pow2(pow2(color.a))), color.a), 1.0);
 
 	translucentMult.rgb = mix(translucentMult.rgb, vec3(1.0), min1(pow2(pow2(lViewPos / far))));
+
+	float bloodMoonVisibility = clamp01(1.0 - moonPhase - sunVisibility);
+	ambientColor *= mix(vec3(1.0), vec3(1.0, 0.0, 0.0) * 3.0, bloodMoonVisibility);
 	
 	// Lighting
 	DoLighting(color, shadowMult, playerPos, viewPos, lViewPos, normalM, lmCoordM,
@@ -260,6 +259,8 @@ void main() {
         #ifdef MOON_PHASE_INF_REFLECTION
             highlightColor *= pow2(moonPhaseInfluence);
         #endif
+
+		highlightColor *= 0.3;
 
 		float fresnelM = (pow2(pow2(fresnel)) * 0.85 + 0.15) * reflectMult;
 		
@@ -316,9 +317,7 @@ void main() {
 					vec3 skyReflection = GetLowQualitySky(RVdotU, RVdotS, dither, true, true);
 					skyReflection = mix(color.rgb * 0.5, skyReflection, skyLightFactor);
 					
-					#ifdef ATM_COLOR_MULTS
-						skyReflection *= atmColorMult;
-					#endif
+					skyReflection *= atmColorMult;
 
 					reflection.rgb = mix(skyReflection, reflection.rgb, reflection.a);
 				}
@@ -390,7 +389,7 @@ out vec4 glColor;
 #endif
 
 #ifdef WAVING_WATER_VERTEX
-	uniform float frameTimeCounter;
+	
 
 	uniform vec3 cameraPosition;
 

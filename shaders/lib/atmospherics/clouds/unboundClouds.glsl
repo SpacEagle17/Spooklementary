@@ -15,7 +15,7 @@
     const float cloudStretch = cloudStretchRaw / float(CLOUD_UNBOUND_SIZE_MULT_M);
 #endif
 
-const float cloudHeight = cloudStretch * 2.0;
+const float cloudHeightShader = cloudStretch * 2.0;
 
 float Noise3D(vec3 p) {
     p.z = fract(p.z) * 128.0;
@@ -76,8 +76,8 @@ float GetCloudNoise(vec3 tracePos, int cloudAltitude, float lTracePosXZ, float c
     }
     noise = pow2(noise / total);
     noiseMult *= 0.65 + 0.01 * sqrt(lTracePosXZ + 10.0) // more clouds far away
-                      + 0.1 * clamp01(-cloudPlayerPosY / cloudHeight) // more clouds when camera is above them
-                      + 0.4 * rainFactor; // more clouds during rain
+                      + 0.1 * clamp01(-cloudPlayerPosY / cloudHeightShader) // more clouds when camera is above them
+                      + 0.4 * rainFactor + 0.5  ; // more clouds during rain
     noise *= noiseMult * CLOUD_UNBOUND_AMOUNT;
 
     float threshold = clamp(abs(cloudAltitude - tracePos.y) / cloudStretch, 0.001, 0.999);
@@ -156,11 +156,18 @@ vec4 GetVolumetricClouds(int cloudAltitude, float distanceThreshold, inout float
 
             float opacityFactor = min1(cloudNoise * 8.0);
 
-            float cloudShading = 1.0 - (higherPlaneAltitude - tracePos.y) / cloudHeight;
+            float cloudShading = 1.0 - (higherPlaneAltitude - tracePos.y) / cloudHeightShader;
             cloudShading *= 1.0 + 0.75 * VdotSM3 * (1.0 - opacityFactor);
             
             vec3 colorSample = cloudAmbientColor * (0.7 + 0.3 * cloudShading) + cloudLightColor * cloudShading;
             //vec3 colorSample = 2.5 * cloudLightColor * pow2(cloudShading); // <-- Used this to take the Unbound logo
+            #ifdef IS_IRIS
+                vec2 lightningAdd = lightningFlashEffect(tracePos - cameraPosition, lightningBoltPosition.xyz, vec3(1.0), 400.0) * lightningBoltPosition.w * 10.0;
+                colorSample += lightningAdd.y;
+            #else
+                vec2 lightningAdd = lightningFlashEffect(tracePos - cameraPosition, vec3(0.0, exp(1.0) - 1000.0, 0.0), vec3(1.0), 400.0) * lightningFlashOptifine * 10.0;
+                colorSample += lightningAdd.y;
+            #endif
             vec3 cloudSkyColor = GetSky(VdotU, VdotS, dither, true, false);
             float cloudFogFactor = clamp((distanceThreshold - lTracePosXZ) / distanceThreshold, 0.0, 0.8) * 1.25;
             float skyMult1 = 1.0 - 0.2 * (1.0 - skyFade) * max(sunVisibility2, nightFactor);

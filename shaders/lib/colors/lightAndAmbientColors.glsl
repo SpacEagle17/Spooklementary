@@ -45,16 +45,16 @@
     vec3 rainLightColor   = mix(nightRainLightColor, dayRainLightColor, sunVisibility2) * 2.5;
     vec3 rainAmbientColor = mix(nightRainAmbientColor, dayRainAmbientColor, sunVisibility2);
 
-    vec3 lightColor   = mix(clearLightColor, rainLightColor, rainFactor);
-    vec3 ambientColor = mix(clearAmbientColor, rainAmbientColor, rainFactor);
+    vec3 lightColor   = mix(clearLightColor, rainLightColor, rainFactor) * 0.4;
+    vec3 ambientColor = mix(clearAmbientColor, rainAmbientColor, rainFactor) * 0.4;
 #elif defined NETHER
     vec3 lightColor   = vec3(0.0);
-    vec3 ambientColor = (netherColor + 0.5 * lavaLightColor) * (0.9 + 0.45 * vsBrightness);
+    vec3 ambientColor = (netherColor + 0.5 * lavaLightColor) * (0.9 + 0.45 * vsBrightness) * 0.4;
 #elif defined END
     vec3 endLightColor = vec3(0.68, 0.51, 1.07);
     float endLightBalancer = 0.2 * vsBrightness;
-    vec3 lightColor    = endLightColor * (0.35 - endLightBalancer);
-    vec3 ambientColor  = endLightColor * (0.2 + endLightBalancer);
+    vec3 lightColor    = endLightColor * (0.35 - endLightBalancer) * 0.4;
+    vec3 ambientColor  = endLightColor * (0.2 + endLightBalancer) * 0.4;
 #endif
 
 #endif

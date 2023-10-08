@@ -106,9 +106,7 @@ vec4 GetReflection(vec3 normalM, vec3 viewPos, vec3 nViewPos, vec3 playerPos, fl
 
             //skyReflection += pow(lightColor, vec3(0.8)) * 0.6 * rainFactor2; // Add approximate light shaft color
 
-            #ifdef ATM_COLOR_MULTS
-                skyReflection *= atmColorMult;
-            #endif
+            skyReflection *= atmColorMult;
             
             #ifdef DEFERRED1
                 skyReflection *= skyLightFactor;
@@ -125,9 +123,7 @@ vec4 GetReflection(vec3 normalM, vec3 viewPos, vec3 nViewPos, vec3 playerPos, fl
                 vec3 skyReflection = endSkyColor * shadowMult;
             #endif
 
-            #ifdef ATM_COLOR_MULTS
-                skyReflection *= atmColorMult;
-            #endif
+            skyReflection *= atmColorMult;
         #else
             vec3 skyReflection = vec3(0.0);
         #endif

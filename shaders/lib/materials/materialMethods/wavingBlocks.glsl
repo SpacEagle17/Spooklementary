@@ -2,6 +2,7 @@ vec3 GetWave(in vec3 pos, float waveSpeed) {
     float wind = frameTimeCounter * waveSpeed * WAVING_SPEED;
 
     float magnitude = sin(wind * 0.0027 + pos.z + pos.y) * 0.04 + 0.04;
+    magnitude *= mix(1.0, 2.5, rainFactor);
     float d0 = sin(wind * 0.0127);
     float d1 = sin(wind * 0.0089);
     float d2 = sin(wind * 0.0114);

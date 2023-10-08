@@ -39,7 +39,7 @@ uniform int frameCounter;
 uniform float viewWidth;
 uniform float viewHeight;
 uniform float nightVision;
-uniform float frameTimeCounter;
+
 
 uniform vec3 skyColor;
 uniform vec3 cameraPosition;
@@ -168,6 +168,9 @@ void main() {
 	#ifdef COATED_TEXTURES
 		CoatTextures(color.rgb, noiseFactor, playerPos);
 	#endif
+
+	float bloodMoonVisibility = clamp01(1.0 - moonPhase - sunVisibility);
+	ambientColor *= mix(vec3(1.0), vec3(1.0, 0.0, 0.0) * 3.0, bloodMoonVisibility);
 
 	DoLighting(color, shadowMult, playerPos, viewPos, lViewPos, normalM, lmCoordM,
 	           noSmoothLighting, noDirectionalShading, false, false,

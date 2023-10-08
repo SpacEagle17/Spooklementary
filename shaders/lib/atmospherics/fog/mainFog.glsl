@@ -1,6 +1,4 @@
-#ifdef ATM_COLOR_MULTS
     #include "/lib/colors/colorMultipliers.glsl"
-#endif
 
 #ifdef BORDER_FOG
     #ifdef OVERWORLD
@@ -12,9 +10,6 @@
     void DoBorderFog(inout vec3 color, inout float skyFade, float lPlayerPosXZ, float VdotU, float VdotS, float dither) {
         #if defined OVERWORLD || defined END
             float fog = lPlayerPosXZ / far;
-            fog *= fog;
-            fog *= fog;
-            fog *= fog;
             fog *= fog;
             fog = 1.0 - exp(-3.0 * fog);
         #endif
@@ -35,9 +30,7 @@
                 vec3 fogColorM = endSkyColor;
             #endif
 
-            #ifdef ATM_COLOR_MULTS
-                fogColorM *= atmColorMult;
-            #endif
+            fogColorM *= atmColorMult;
 
             color = mix(color, fogColorM, fog);
 
@@ -90,8 +83,8 @@
             renDisFactor *= ATM_FOG_DISTANCE_M;
         #endif
 
-        float fog = 1.0 - exp(-pow(lViewPos * (0.001 - 0.0007 * rainFactor), 2.0 - rainFactor2) * lViewPos * renDisFactor);
-              fog *= ATM_FOG_MULT - 0.1 - 0.15 * invRainFactor;
+        float fog = 1.0 - exp(-pow(lViewPos * (0.001 - 0.0007 * rainFactor), 2.0 - rainFactor2) * lViewPos * renDisFactor * 100.0);
+              fog *= max(ATM_FOG_MULT, 1.0) - 0.1 - 0.15 * invRainFactor;
         
         float altitudeFactorP = GetAtmFogAltitudeFactor(playerPos.y + cameraPosition.y);
         float altitudeFactor = altitudeFactorP;
@@ -102,6 +95,7 @@
             #ifdef CAVE_FOG
                 fog *= 0.2 + 0.8 * sqrt2(eyeBrightnessM);
                 fog *= 1.0 - GetCaveFactor();
+                fog *= 2.0;
             #else
                 fog *= eyeBrightnessM;
             #endif
@@ -119,14 +113,12 @@
                     nightUpSkyColor * (nightFogMult - dayNightFogBlend * nightFogMult),
                     dayDownSkyColor * (0.9 + 0.2 * noonFactor),
                     dayNightFogBlend
-                );
+                ) * 0.5;
             #else
                 vec3 fogColorM = endSkyColor;
             #endif
 
-            #ifdef ATM_COLOR_MULTS
-                fogColorM *= atmColorMult;
-            #endif
+            fogColorM *= atmColorMult;
 
             color = mix(color, fogColorM, fog);
         }
@@ -138,7 +130,7 @@
 void DoWaterFog(inout vec3 color, float lViewPos) {
     float fog = GetWaterFog(lViewPos);
 
-    color = mix(color, waterFogColor, fog);
+    color = mix(color, waterFogColor, fog) * 0.2;
 }
 
 void DoLavaFog(inout vec3 color, float lViewPos) {

@@ -1022,6 +1022,12 @@ if (mat < 10512) {
                                     if (color.b < 0.4)
                                         emission = clamp01(color.g * 1.3 - color.r) * 5.0;
                                 #endif
+
+                                float noiseAdd = 0.0;
+                                #ifdef GBUFFERS_TERRAIN
+                                    noiseAdd = hash13(mod(floor(worldPos + atMidBlock / 64) + frameTimeCounter * 0.000001, vec3(100)));
+                                #endif
+                                emission *= mix(0.0, 1.0, smoothstep(0.2, 1.0, texture2D(noisetex, vec2(frameTimeCounter * 0.04 + noiseAdd)).r));
                             }
                         }
                     } else {

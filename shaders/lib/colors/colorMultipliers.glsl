@@ -32,8 +32,8 @@ vec3 GetAtmColorMult() {
     #ifdef OVERWORLD
         vec3 morningAtmMult = vec3(ATM_MORNING_R, ATM_MORNING_G, ATM_MORNING_B) * ATM_MORNING_I;
         vec3 noonAtmMult = vec3(ATM_NOON_R, ATM_NOON_G, ATM_NOON_B) * ATM_NOON_I;
-        vec3 nightAtmMult = vec3(ATM_NIGHT_R, ATM_NIGHT_G, ATM_NIGHT_B) * ATM_NIGHT_I;
-        vec3 rainAtmMult = vec3(ATM_RAIN_R, ATM_RAIN_G, ATM_RAIN_B) * ATM_RAIN_I;
+        vec3 nightAtmMult = vec3(ATM_NIGHT_R, ATM_NIGHT_G, ATM_NIGHT_B) * ATM_NIGHT_I * 0.7;
+        vec3 rainAtmMult = vec3(ATM_RAIN_R, ATM_RAIN_G, ATM_RAIN_B) * ATM_RAIN_I * 0.7;
 
         atmColorMult = mix(noonAtmMult, morningAtmMult, invNoonFactor2);
         atmColorMult = mix(nightAtmMult, atmColorMult, sunVisibility2);

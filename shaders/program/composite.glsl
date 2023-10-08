@@ -30,8 +30,8 @@ uniform sampler2D colortex0;
 uniform sampler2D depthtex0;
 uniform sampler2D depthtex1;
 
-#if defined LIGHTSHAFTS_ACTIVE || WATER_QUALITY >= 3 || defined NETHER_STORM || RAINBOWS > 0
-	uniform float frameTimeCounter;
+#if defined LIGHTSHAFTS_ACTIVE || WATER_QUALITY >= 3 || defined NETHER_STORM
+	
 
 	uniform mat4 gbufferProjection;
 	uniform mat4 gbufferModelViewInverse;
@@ -41,7 +41,7 @@ uniform sampler2D depthtex1;
 	uniform sampler2D noisetex;
 #endif
 
-#if defined LIGHTSHAFTS_ACTIVE || defined NETHER_STORM || RAINBOWS > 0
+#if defined LIGHTSHAFTS_ACTIVE || defined NETHER_STORM
 	uniform int frameCounter;
 
 	#ifndef LIGHT_COLORING
@@ -71,14 +71,12 @@ uniform sampler2D depthtex1;
 	uniform sampler2D colortex1;
 #endif
 
-#if defined LIGHTSHAFTS_ACTIVE && defined LENSFLARE || RAINBOWS > 0 && defined OVERWORLD
+#if defined LIGHTSHAFTS_ACTIVE && defined LENSFLARE
 	uniform sampler2D colortex4;
 #endif
 
-#if RAINBOWS == 1
-	uniform float wetness;
-	uniform float inRainy;
-#endif
+uniform float wetness;
+uniform float inRainy;
 
 //Pipeline Constants//
 //const bool colortex0MipmapEnabled = true;
@@ -132,13 +130,7 @@ vec2 view = vec2(viewWidth, viewHeight);
 	#include "/lib/atmospherics/netherStorm.glsl"
 #endif
 
-#ifdef ATM_COLOR_MULTS
-	#include "/lib/colors/colorMultipliers.glsl"
-#endif
-
-#if RAINBOWS > 0 && defined OVERWORLD
-	#include "/lib/atmospherics/rainbow.glsl"
-#endif
+#include "/lib/colors/colorMultipliers.glsl"
 
 //Program//
 void main() {
@@ -146,7 +138,7 @@ void main() {
 	float z0 = texelFetch(depthtex0, texelCoord, 0).r;
 	float z1 = texelFetch(depthtex1, texelCoord, 0).r;
 
-	#if defined LIGHTSHAFTS_ACTIVE || WATER_QUALITY >= 3 || defined BLOOM_FOG_COMPOSITE || defined NETHER_STORM || RAINBOWS > 0 && defined OVERWORLD
+	#if defined LIGHTSHAFTS_ACTIVE || WATER_QUALITY >= 3 || defined BLOOM_FOG_COMPOSITE || defined NETHER_STORM
 		vec4 screenPos = vec4(texCoord, z0, 1.0);
 		vec4 viewPos = gbufferProjectionInverse * (screenPos * 2.0 - 1.0);
 		viewPos /= viewPos.w;
@@ -159,7 +151,7 @@ void main() {
 
 	vec4 volumetricEffect = vec4(0.0);
 
-	#if defined LIGHTSHAFTS_ACTIVE || defined NETHER_STORM || RAINBOWS > 0 && defined OVERWORLD
+	#if defined LIGHTSHAFTS_ACTIVE || defined NETHER_STORM
 		/* The "1.0 - translucentMult" trick is done because of the default color attachment
 		value being vec3(0.0). This makes it vec3(1.0) to avoid issues especially on improved glass */
 		#ifndef LIGHT_COLORING
@@ -179,7 +171,7 @@ void main() {
 		float lViewPos1 = length(viewPos1.xyz);
 	#endif
 
-	#if defined LIGHTSHAFTS_ACTIVE || RAINBOWS > 0 && defined OVERWORLD
+	#ifdef LIGHTSHAFTS_ACTIVE
 		vec3 nViewPos = normalize(viewPos.xyz);
 		float VdotL = dot(nViewPos, lightVec);
 	#endif
@@ -198,16 +190,10 @@ void main() {
 		volumetricEffect = GetNetherStorm(color, translucentMult, playerPos, viewPos.xyz, lViewPos, lViewPos1, dither);
 	#endif
 		
-	#ifdef ATM_COLOR_MULTS
-		volumetricEffect.rgb *= GetAtmColorMult();
-	#endif
+	volumetricEffect.rgb *= GetAtmColorMult();
 
 	#ifdef NETHER_STORM
 		if (isEyeInWater == 0) color = mix(color, volumetricEffect.rgb, volumetricEffect.a);
-	#endif
-
-	#if RAINBOWS > 0 && defined OVERWORLD
-		if (isEyeInWater == 0) color += GetRainbow(translucentMult, z0, z1, lViewPos, lViewPos1, VdotL, dither);
 	#endif
 	
 	if (isEyeInWater == 1) {

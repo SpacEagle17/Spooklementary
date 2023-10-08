@@ -27,6 +27,8 @@ uniform mat4 gbufferProjectionInverse;
 
 uniform sampler2D tex;
 
+uniform int moonPhase;
+
 #ifdef CAVE_FOG
 	uniform vec3 cameraPosition;
 #endif
@@ -74,10 +76,12 @@ void main() {
 			#endif
 
 			if (VdotS > 0.0) { // Sun
-				color.rgb *= dot(color.rgb, color.rgb) * normalize(lightColor) * 3.2;
+				color.rgb *= dot(color.rgb, color.rgb) * normalize(lightColor) * 0.5;
 				color.rgb *= 0.25 + (0.75 - 0.25 * rainFactor) * sunVisibility2;
 			} else { // Moon
 				color.rgb *= smoothstep1(min1(length(color.rgb))) * 1.3;
+				float bloodMoonVisibility = clamp01(1.0 - moonPhase - sunVisibility);
+				color.rgb = mix(color.rgb, GetLuminance(color.rgb) * vec3(1.0, 0.0, 0.0) * 1.5, bloodMoonVisibility);
 			}
 
 			color.rgb *= GetHorizonFactor(VdotU);
@@ -95,7 +99,7 @@ void main() {
 		}
 
 		if (isEyeInWater == 1) color.rgb *= 0.25;
-		color.a *= 1.0 - 0.8 * rainFactor;
+		color.a *= mix(1.0, 1.0 - 0.8 * rainFactor, heightRelativeToCloud);
 	#endif
 
 	#ifdef NETHER

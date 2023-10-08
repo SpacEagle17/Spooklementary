@@ -254,5 +254,5 @@ vec4 GetVolumetricLight(inout vec3 color, inout float vlFactor, vec3 translucent
 	volumetricLight = max(volumetricLight, vec4(0.0));
 	volumetricLight.a = min(volumetricLight.a, 1.0);
 
-	return volumetricLight;
+	return volumetricLight * 0.2;
 }

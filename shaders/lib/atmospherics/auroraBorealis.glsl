@@ -1,5 +1,6 @@
 vec3 GetAuroraBorealis(vec3 viewPos, float VdotU, float dither) {
-    float visibility = sqrt1(clamp01(VdotU * 1.5 - 0.225)) - sunVisibility - rainFactor;
+    float visibility = sqrt1(clamp01(VdotU * 1.5 - 0.225)) - sunVisibility;
+    visibility -= mix(0.0, rainFactor, heightRelativeToCloud);
     visibility *= 1.0 - VdotU * 0.9;
 
     #if AURORA_CONDITION == 1 || AURORA_CONDITION == 3
@@ -48,7 +49,7 @@ vec3 GetAuroraBorealis(vec3 viewPos, float VdotU, float dither) {
             #endif
 
             float currentM = 1.0 - current;
-            aurora += noise * currentM * mix(vec3(7.0, 2.2, 12.0), vec3(6.0, 16.0, 12.0), pow2(pow2(currentM)));
+            aurora += noise * currentM * mix(vec3(0.0, 7.0, 7.0), vec3(20.0, 0.0, 0.0), pow2(pow2(currentM)));
         }
     
         #if AURORA_STYLE == 1

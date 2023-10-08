@@ -23,8 +23,10 @@ uniform float viewWidth, viewHeight;
 #ifdef UNDERWATER_DISTORTION
 	uniform int isEyeInWater;
 
-	uniform float frameTimeCounter;
+	
 #endif
+
+uniform float playerMood;
 
 //Pipeline Constants//
 #include "/lib/pipelineSettings.glsl"
@@ -56,6 +58,10 @@ uniform float viewWidth, viewHeight;
 	}
 #endif
 
+float retroNoise (vec2 noise){
+	return fract(sin(dot(noise.xy,vec2(10.998,98.233)))*12433.14159265359);
+}
+
 //Includes//
 #ifdef MC_ANISOTROPIC_FILTERING
 	#include "/lib/util/textRendering.glsl"
@@ -81,14 +87,12 @@ void main() {
 		vec3 color = texture2D(colortex8, texCoordM).rgb;
 	#endif
 
-	#if CHROMA_ABERRATION > 0
-		vec2 scale = vec2(1.0, viewHeight / viewWidth);
-		vec2 aberration = (texCoordM - 0.5) * (2.0 / vec2(viewWidth, viewHeight)) * scale * CHROMA_ABERRATION;
-		#ifndef LIGHT_COLORING
-			color.rb = vec2(texture2D(colortex3, texCoordM + aberration).r, texture2D(colortex3, texCoordM - aberration).b);
-		#else
-			color.rb = vec2(texture2D(colortex8, texCoordM + aberration).r, texture2D(colortex8, texCoordM - aberration).b);
-		#endif
+	vec2 scale = vec2(1.0, viewHeight / viewWidth);
+	vec2 aberration = (texCoordM - 0.5) * (2.0 / vec2(viewWidth, viewHeight)) * scale * playerMood * 10.0;
+	#ifndef LIGHT_COLORING
+		color.rb = vec2(texture2D(colortex3, texCoordM + aberration).r, texture2D(colortex3, texCoordM - aberration).b);
+	#else
+		color.rb = vec2(texture2D(colortex8, texCoordM + aberration).r, texture2D(colortex8, texCoordM - aberration).b);
 	#endif
 
 	#if IMAGE_SHARPENING > 0
@@ -141,6 +145,21 @@ void main() {
 		));
 		endText(color.rgb);
 	#endif
+
+	float maxStrength = 0.50;
+	float minStrength = 0.30;
+	const float speed = 10.0;
+
+	vec2 fractCoord = fract(texCoord * fract(sin(frameTimeCounter * speed)));
+
+	maxStrength = clamp(sin(frameTimeCounter * 0.5), minStrength, maxStrength);
+
+	vec3 staticColor = vec3(retroNoise(fractCoord)) * maxStrength;
+	float staticIntensity = 0.0;
+	if (playerMood > 0.9) staticIntensity = (playerMood * 10.0 - 9.0) * 0.75;
+	color *= mix(vec3(1.0), color - staticColor, staticIntensity);
+
+	color.rgb = mix(color.rgb, color.rgb * GetLuminance(color), 0.60);
 
 	//if (gl_FragCoord.x < 479 || gl_FragCoord.x > 1441) color = vec3(0.0);
 

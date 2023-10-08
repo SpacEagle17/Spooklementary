@@ -24,7 +24,7 @@ uniform float far, near;
 uniform float viewWidth, viewHeight;
 uniform float blindness;
 uniform float darknessFactor;
-uniform float frameTimeCounter;
+
 uniform float aspectRatio;
 
 uniform vec3 skyColor;
@@ -227,9 +227,7 @@ float GetLinearDepth(float depth) {
 	#include "/lib/misc/darkOutline.glsl"
 #endif
 
-#ifdef ATM_COLOR_MULTS
-    #include "/lib/colors/colorMultipliers.glsl"
-#endif
+#include "/lib/colors/colorMultipliers.glsl"
 
 #ifdef NIGHT_NEBULA
 	#include "/lib/atmospherics/nightNebula.glsl"
@@ -252,9 +250,7 @@ void main() {
 		dither = fract(dither + 1.61803398875 * mod(float(frameCounter), 3600.0));
 	#endif
 
-	#ifdef ATM_COLOR_MULTS
-		atmColorMult = GetAtmColorMult();
-	#endif
+	atmColorMult = GetAtmColorMult();
 
 	float VdotU = dot(nViewPos, upVec);
 	float VdotS = dot(nViewPos, sunVec);
@@ -450,33 +446,25 @@ void main() {
 		#ifdef OVERWORLD
 			#if AURORA_STYLE > 0
 				auroraBorealis = GetAuroraBorealis(viewPos.xyz, VdotU, dither);
-				#ifdef ATM_COLOR_MULTS
-					auroraBorealis *= atmColorMult;
-				#endif
+				auroraBorealis *= atmColorMult;
 				color.rgb += auroraBorealis;
 			#endif
 			#ifdef NIGHT_NEBULA
 				nightNebula += GetNightNebula(viewPos.xyz, VdotU, VdotS);
-				#ifdef ATM_COLOR_MULTS
-					nightNebula *= atmColorMult;
-				#endif
+				nightNebula *= atmColorMult;
 				color.rgb += nightNebula;
 			#endif
 		#endif
 		#ifdef NETHER
 			color.rgb = netherColor;
 
-			#ifdef ATM_COLOR_MULTS
-				color.rgb *= atmColorMult;
-			#endif
+			color.rgb *= atmColorMult;
 		#endif
 		#ifdef END
 			color.rgb = endSkyColor;
 			color.rgb += GetEnderStars(viewPos.xyz, VdotU);
 
-			#ifdef ATM_COLOR_MULTS
-				color.rgb *= atmColorMult;
-			#endif
+			color.rgb *= atmColorMult;
 		#endif
 	}
 	
@@ -486,9 +474,7 @@ void main() {
 		if (z0 > 0.56) {
 			vec4 clouds = GetClouds(cloudLinearDepth, skyFade, playerPos, viewPos.xyz, lViewPos, VdotS, VdotU, dither);
 
-			#ifdef ATM_COLOR_MULTS
-				clouds.rgb *= atmColorMult;
-			#endif
+			clouds.rgb *= atmColorMult;
 
 			#if AURORA_STYLE > 0
 				clouds.rgb += auroraBorealis * 0.1;

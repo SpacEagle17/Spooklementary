@@ -9,6 +9,10 @@
   -> -> -> DO NOT CHANGE ANYTHING UNLESS YOU KNOW WHAT YOU ARE DOING
   -> -> -> DO NOT EXPECT SUPPORT AFTER MODIFYING SHADER FILES
 ---------------------------------------------------------------------*/
+uniform float frameTimeCounter;
+uniform vec4 lightningBoltPosition;
+uniform float lightningFlashOptifine;
+uniform float lightning;
 
 //User Settings//
     #define SHADER_STYLE 4 //[1 4]
@@ -61,7 +65,7 @@
     #define WATER_SIZE_MULT 100 //[25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100 110 120 130 140 150 160 170 180 190 200 220 240 260 280 300]
 
     #define PIXEL_SHADOW 0 //[0 8 16 32 64 128]
-    #define RAIN_PUDDLES 0 //[0 1 2 3 4]
+    #define RAIN_PUDDLES 1 //[0 1 2 3 4]
     #define SSAO_I 100 //[0 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100 110 120 130 140 150 160 170 180 190 200 220 240 260 280 300]
     #define VANILLAAO_I 100 //[0 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100 110 120 130 140 150 160 170 180 190 200 220 240 260 280 300]
     
@@ -73,7 +77,6 @@
     #define SUN_MOON_STYLE_DEFINE -1 //[-1 1 2 3]
     #define SUN_MOON_HORIZON
     #define NIGHT_STAR_AMOUNT 2 //[2 3]
-    #define RAINBOWS 1 //[0 1 3]
     #define CLOUD_STYLE_DEFINE -1 //[-1 0 1 3 50]
     //#define CLOUD_SHADOWS
     #define CLOUD_CLOSED_AREA_CHECK
@@ -130,7 +133,7 @@
     #define GENERATED_NORMAL_MULT 100 //[25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100 110 120 130 140 150 160 170 180 190 200]
     #define COATED_TEXTURE_MULT 100 //[25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100 110 120 130 140 150 160 170 180 190 200]
 
-    #define GLOWING_ORE_MASTER 1 //[0 1 2]
+    #define GLOWING_ORE_MASTER 0 //[0 1 2]
     #define GLOWING_ORE_MULT 1.00 //[0.15 0.20 0.25 0.30 0.35 0.40 0.45 0.50 0.55 0.60 0.65 0.70 0.75 0.80 0.85 0.90 0.95 1.00 1.10 1.20 1.30 1.40 1.50 1.60 1.70 1.80 1.90 2.00]
     #if GLOWING_ORE_MASTER == 2 || SHADER_STYLE == 4 && GLOWING_ORE_MASTER == 1
         #define GLOWING_ORE_IRON
@@ -170,7 +173,7 @@
     #define WAVING_I 1.00 //[0.25 0.50 0.75 1.00 1.25 1.50 1.75 2.00 50.0]
     #define NO_WAVING_INDOORS
     #define WAVING_FOLIAGE
-    //#define WAVING_LEAVES
+    #define WAVING_LEAVES
     #define WAVING_LAVA
     #define WAVING_WATER_VERTEX
     #define WAVING_RAIN
@@ -322,7 +325,7 @@
         #define WATER_STYLE_DEFAULT 3
         //#define WATER_CAUSTIC_STYLE_DEFAULT 3
         #define AURORA_STYLE_DEFAULT 2
-        #define SUN_MOON_STYLE_DEFAULT 2
+        #define SUN_MOON_STYLE_DEFAULT 3
         #define CLOUD_STYLE_DEFAULT 3
     #endif
     #if WATER_STYLE_DEFINE == -1
@@ -513,8 +516,6 @@
     #endif
     #ifdef POM_ALLOW_CUTOUT
     #endif
-    #ifdef ATM_COLOR_MULTS
-    #endif
     #ifdef CLOUD_CLOSED_AREA_CHECK
     #endif
     #ifdef BRIGHT_CAVE_WATER
@@ -562,6 +563,19 @@
         OSIEBCA * 255.0 = *Unused as 1.0 is the clear color*
     */
 
+    float cloudMaxAdd = 5.0;
+    uniform float cloudHeight = 192.0;
+    uniform float eyeAltitude;
+    #if defined DOUBLE_REIM_CLOUDS && defined CLOUDS_REIMAGINED
+        float maximumCloudsHeight = max(CLOUD_ALT1, CLOUD_ALT2) + cloudMaxAdd;
+    #elif CLOUD_STYLE_DEFINE == 50
+        float maximumCloudsHeight = cloudHeight + cloudMaxAdd;
+    #else
+        float maximumCloudsHeight = CLOUD_ALT1 + cloudMaxAdd;
+    #endif
+    float cloudGradientLength = 30.0; // in blocks, probably...
+    float heightRelativeToCloud = clamp(1.0 - (eyeAltitude - maximumCloudsHeight) / cloudGradientLength, 0.0, 1.0);
+
     const float shadowMapBias = 1.0 - 25.6 / shadowDistance;
     float timeAngle = worldTime / 24000.0;
     float noonFactor = sqrt(max(sin(timeAngle*6.28318530718),0.0));
@@ -582,7 +596,7 @@
 
     const float oceanAltitude = 61.9;
 
-    const vec3 blocklightCol = vec3(0.1775, 0.108, 0.0775) * vec3(XLIGHT_R, XLIGHT_G, XLIGHT_B);
+    const vec3 blocklightCol = vec3(0.2, 0.1098, 0.0431) * vec3(XLIGHT_R, XLIGHT_G, XLIGHT_B);
 
     const vec3 caveFogColorRaw = vec3(0.13, 0.13, 0.15);
     #if MINIMUM_LIGHT_MODE <= 1

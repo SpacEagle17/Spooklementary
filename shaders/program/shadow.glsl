@@ -26,7 +26,7 @@ uniform sampler2D tex;
 uniform sampler2D noisetex;
 
 #if WATER_CAUSTIC_STYLE >= 3
-	uniform float frameTimeCounter;
+	
 	
 	uniform sampler2D gaux4;
 #endif
@@ -162,6 +162,14 @@ void main() {
 		}
 	#endif
 
+	int seed = worldDay / 2; // Thanks to Bálint
+	int currTime = (worldDay % 2) * 24000 + worldTime; // Effect happens every 2 minecraft days
+	float randomTime = 24000 * hash1(worldDay * 5); // Effect happens randomly throughout the day
+	int timeWhenItHappens = (int(hash1(seed)) % (2 * 24000)) + int(randomTime);
+	if (currTime > timeWhenItHappens && currTime < timeWhenItHappens + 100) { // 100 in ticks - 5s, how long the effect will be on, aka leaves are gone
+		if (mat == 10007 || mat == 10008) discard; // disable leaves
+	}
+
     gl_FragData[0] = color1; // Shadow Color
 
 	#if SHADOW_QUALITY >= 1
@@ -194,7 +202,7 @@ uniform mat4 gbufferProjectionInverse;
 uniform mat4 gbufferModelViewInverse;
 
 #if defined WAVING_ANYTHING_TERRAIN || defined WAVING_WATER_VERTEX
-	uniform float frameTimeCounter;
+	
 
 	uniform vec3 cameraPosition;
 #endif

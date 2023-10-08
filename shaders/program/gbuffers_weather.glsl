@@ -22,6 +22,8 @@ uniform vec3 skyColor;
 
 uniform sampler2D tex;
 
+uniform vec3 cameraPosition;
+
 //Pipeline Constants//
 
 //Common Variables//
@@ -45,6 +47,8 @@ void main() {
 	color *= glColor;
 
 	if (color.a < 0.1 || isEyeInWater == 3) discard;
+
+	if (cameraPosition.y > maximumCloudsHeight) discard;
 
 	if (color.r + color.g < 1.5) color.a *= rainTexOpacity;
 	else color.a *= snowTexOpacity;
@@ -72,7 +76,7 @@ flat out vec3 upVec, sunVec;
 flat out vec4 glColor;
 
 //Uniforms//
-uniform float frameTimeCounter;
+
 
 uniform mat4 gbufferModelViewInverse;
 
