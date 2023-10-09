@@ -254,5 +254,9 @@ vec4 GetVolumetricLight(inout vec3 color, inout float vlFactor, vec3 translucent
 	volumetricLight = max(volumetricLight, vec4(0.0));
 	volumetricLight.a = min(volumetricLight.a, 1.0);
 
-	return volumetricLight * 0.2;
+	float spookyVolLight = 0.2;
+
+	if (isEyeInWater == 1) volumetricLight *= 0.2;
+
+	return volumetricLight * 0.35;
 }
