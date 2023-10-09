@@ -96,6 +96,7 @@
                 fog *= 0.2 + 0.8 * sqrt2(eyeBrightnessM);
                 fog *= 1.0 - GetCaveFactor();
                 fog *= 1.5;
+                fog *= mix(1.0, 0.6, rainFactor);
             #else
                 fog *= eyeBrightnessM;
             #endif

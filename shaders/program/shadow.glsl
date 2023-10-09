@@ -167,7 +167,7 @@ void main() {
 	float randomTime = 24000 * hash1(worldDay * 5); // Effect happens randomly throughout the day
 	int timeWhenItHappens = (int(hash1(seed)) % (2 * 24000)) + int(randomTime);
 	if (currTime > timeWhenItHappens && currTime < timeWhenItHappens + 100) { // 100 in ticks - 5s, how long the effect will be on, aka leaves are gone
-		if (mat == 10007 || mat == 10008) discard; // disable leaves
+		if (mat == 10008) discard; // disable leaves
 	}
 
     gl_FragData[0] = color1; // Shadow Color
