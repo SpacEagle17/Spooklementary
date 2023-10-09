@@ -260,7 +260,7 @@ void main() {
 			centerShadowBias = true;
 		} else if (mat == 10396){ // Jack o'Lantern
 			float noiseAdd = hash13(mod(floor(worldPos + atMidBlock / 64) + frameTimeCounter * 0.000001, vec3(100)));
-			emission *= mix(0.0, 1.0, smoothstep(0.2, 1.0, texture2D(noisetex, vec2(frameTimeCounter * 0.04 + noiseAdd)).r));
+			emission *= mix(0.0, 1.0, smoothstep(0.2, 0.9, texture2D(noisetex, vec2(frameTimeCounter * 0.025 + noiseAdd)).r));
 		}
 
 		#ifdef SNOWY_WORLD
@@ -344,6 +344,9 @@ void main() {
 
 	float bloodMoonVisibility = clamp01(1.0 - moonPhase - sunVisibility);
 	ambientColor *= mix(vec3(1.0), vec3(1.0, 0.0, 0.0) * 3.0, bloodMoonVisibility);
+
+	float noiseAdd = hash13(mod(floor(worldPos + atMidBlock / 64) + frameTimeCounter * 0.000001, vec3(100)));
+	emission *= mix(0.5, 1.0, smoothstep(0.1, 0.11, texture2D(noisetex, vec2(frameTimeCounter * 0.008 + noiseAdd)).r));
 
 	DoLighting(color, shadowMult, playerPos, viewPos, lViewPos, normalM, lmCoordM,
 				noSmoothLighting, noDirectionalShading, noVanillaAO, centerShadowBias,

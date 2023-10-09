@@ -1027,7 +1027,7 @@ if (mat < 10512) {
                                 #ifdef GBUFFERS_TERRAIN
                                     noiseAdd = hash13(mod(floor(worldPos + atMidBlock / 64) + frameTimeCounter * 0.000001, vec3(100)));
                                 #endif
-                                emission *= mix(0.0, 1.0, smoothstep(0.2, 1.0, texture2D(noisetex, vec2(frameTimeCounter * 0.04 + noiseAdd)).r));
+                                emission *= mix(0.0, 1.0, smoothstep(0.2, 0.9, texture2D(noisetex, vec2(frameTimeCounter * 0.025 + noiseAdd)).r));
                             }
                         }
                     } else {

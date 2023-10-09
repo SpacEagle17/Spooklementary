@@ -95,7 +95,7 @@
             #ifdef CAVE_FOG
                 fog *= 0.2 + 0.8 * sqrt2(eyeBrightnessM);
                 fog *= 1.0 - GetCaveFactor();
-                fog *= 2.0;
+                fog *= 1.5;
             #else
                 fog *= eyeBrightnessM;
             #endif
