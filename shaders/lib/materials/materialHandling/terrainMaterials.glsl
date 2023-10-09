@@ -205,7 +205,7 @@ if (mat < 10512) {
                             if (mat == 10064) { // Lectern
                                 #include "/lib/materials/specificMaterials/planks/oakPlanks.glsl"
                             }
-                            else /*if (mat == 10068)*/ { // Lava
+                            else /*if (mat == 10068 || mat == 10069)*/ { // Lava
                                 #include "/lib/materials/specificMaterials/terrain/lava.glsl"
                             }
                         } else {

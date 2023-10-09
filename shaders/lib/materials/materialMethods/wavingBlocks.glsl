@@ -106,7 +106,7 @@ void DoWave(inout vec3 playerPos, int mat) {
         #endif
 
         #ifdef WAVING_LAVA
-            if (mat == 10068) { // Lava
+            if (mat == 10068 || mat == 10069) { // Lava
                 DoWave_Lava(playerPos.xyz, worldPos);
 
                 #ifdef GBUFFERS_TERRAIN

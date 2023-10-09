@@ -202,6 +202,8 @@ void main() {
 	vec2 lmCoordM = lmCoord;
 	vec3 shadowMult = vec3(1.0);
 
+	float lavaNoiseIntensity = 1.0;
+
 	vec3 eyes1 = vec3(0.0);
 	vec3 eyes2 = vec3(0.0);
 	float sideRandom = hash13(mod(floor(worldPos + atMidBlock / 64) + frameTimeCounter * 0.00001, vec3(100)));
@@ -261,6 +263,12 @@ void main() {
 		} else if (mat == 10396){ // Jack o'Lantern
 			float noiseAdd = hash13(mod(floor(worldPos + atMidBlock / 64) + frameTimeCounter * 0.000001, vec3(100)));
 			emission *= mix(0.0, 1.0, smoothstep(0.2, 0.9, texture2D(noisetex, vec2(frameTimeCounter * 0.025 + noiseAdd)).r));
+		} else if (mat == 10068 || mat == 10069){ // Lava
+			vec2 lavaPos = (floor(worldPos.xz * 16.0) + worldPos.y * 32.0) * 0.000666;
+			vec2 wind = vec2(frameTimeCounter * 0.012, 0.0);
+			lavaNoiseIntensity *= 0.95;
+			#include "/lib/materials/specificMaterials/terrain/lavaNoise.glsl"
+			color.rgb = max(color.rgb, 0.023); // so black spots still have some textures and aren't fully black, currently not working well, texture still 100% black blob
 		}
 
 		#ifdef SNOWY_WORLD
@@ -345,7 +353,7 @@ void main() {
 	float bloodMoonVisibility = clamp01(1.0 - moonPhase - sunVisibility);
 	ambientColor *= mix(vec3(1.0), vec3(1.0, 0.0, 0.0) * 3.0, bloodMoonVisibility);
 
-	if(mat != 10068) {//lava
+	if (mat != 10068 && mat != 10069) { // Lava
 		float noiseAdd = hash13(mod(floor(worldPos + atMidBlock / 64) + frameTimeCounter * 0.000001, vec3(100)));
 		emission *= mix(0.5, 1.0, smoothstep(0.1, 0.11, texture2D(noisetex, vec2(frameTimeCounter * 0.008 + noiseAdd)).r));
 	}
