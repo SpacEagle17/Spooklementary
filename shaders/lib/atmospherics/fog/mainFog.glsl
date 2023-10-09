@@ -130,7 +130,7 @@
 void DoWaterFog(inout vec3 color, float lViewPos) {
     float fog = GetWaterFog(lViewPos);
 
-    color = mix(color, waterFogColor, fog) * 0.2;
+    color = mix(color, waterFogColor, fog) * 0.7;
 }
 
 void DoLavaFog(inout vec3 color, float lViewPos) {
