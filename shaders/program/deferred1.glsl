@@ -51,7 +51,7 @@ uniform sampler2D noisetex;
 #endif
 
 #if AURORA_STYLE > 0
-	uniform int moonPhase;
+	
 
 	uniform float inSnowy;
 #endif

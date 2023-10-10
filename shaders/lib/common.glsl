@@ -13,6 +13,7 @@ uniform float frameTimeCounter;
 uniform vec4 lightningBoltPosition;
 uniform float lightningFlashOptifine;
 uniform float lightning;
+uniform int moonPhase;
 
 //User Settings//
     #define SHADER_STYLE 4 //[1 4]

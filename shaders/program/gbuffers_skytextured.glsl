@@ -27,7 +27,7 @@ uniform mat4 gbufferProjectionInverse;
 
 uniform sampler2D tex;
 
-uniform int moonPhase;
+
 
 #ifdef CAVE_FOG
 	uniform vec3 cameraPosition;

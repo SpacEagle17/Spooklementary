@@ -1,4 +1,4 @@
-uniform int moonPhase;
+
 
 float moonPhaseInfluence = mix(
     1.0,

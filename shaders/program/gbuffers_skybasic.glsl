@@ -33,7 +33,7 @@ uniform mat4 gbufferModelViewInverse;
 #endif
 
 #if SUN_MOON_STYLE >= 2
-	uniform int moonPhase;
+	
 	
 	uniform mat4 gbufferModelView;
 	uniform mat4 shadowModelView;
