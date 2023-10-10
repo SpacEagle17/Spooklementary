@@ -88,7 +88,7 @@ void main() {
 	#endif
 
 	vec2 scale = vec2(1.0, viewHeight / viewWidth);
-	vec2 aberration = (texCoordM - 0.5) * (2.0 / vec2(viewWidth, viewHeight)) * scale * playerMood * 10.0;
+	vec2 aberration = (texCoordM - 0.5) * (2.0 / vec2(viewWidth, viewHeight)) * scale * max(CHROMA_ABERRATION, playerMood * 10.0);
 	#ifndef LIGHT_COLORING
 		color.rb = vec2(texture2D(colortex3, texCoordM + aberration).r, texture2D(colortex3, texCoordM - aberration).b);
 	#else
