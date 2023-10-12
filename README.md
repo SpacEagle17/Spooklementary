@@ -25,6 +25,7 @@
 * Things are much darker. Caves now have a darkness fade.
 * Full moons are blood moons.
 * Chromatic Aberration increases the longer you are in darkness, right before the cave sounds play one might notice some static noise.
+* It no longer rains if above clouds.
   
 </p>
 </details>
