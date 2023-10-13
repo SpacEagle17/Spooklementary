@@ -75,6 +75,7 @@ void main() {
 			vec3 cloudLight = mix(vec3(0.8, 1.6, 1.5) * sqrt1(nightFactor), mix(dayDownSkyColor, dayMiddleSkyColor, 0.1), sunFactor);
 			float bloodMoonVisibility = clamp01(1.0 - moonPhase - sunVisibility);
 			cloudLight *= mix(vec3(1.0), vec3(1.0, 0.0, 0.0) * 3.0, bloodMoonVisibility);
+			color.rgb *= 0.5;
 			color.rgb *= sqrt(cloudLight) * (1.2 + 0.4 * noonFactor * invRainFactor);
 
 			atmColorMult = GetAtmColorMult();

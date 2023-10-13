@@ -49,7 +49,7 @@ vec4 GetClouds(inout float cloudLinearDepth, float skyFade, vec3 playerPos, vec3
     float skyMult0 = pow2(skyFade * 3.333333 - 2.333333);
 
     float bloodMoonVisibility = clamp01(1.0 - moonPhase - sunVisibility);
-    cloudAmbientColor *= mix(vec3(1.0), vec3(1.0, 0.0, 0.0) * 3.0, bloodMoonVisibility);
+    cloudAmbientColor *= mix(vec3(1.0), vec3(1.0, 0.0, 0.0) * 20.0, bloodMoonVisibility);
 
     #ifdef CLOUDS_REIMAGINED
         cloudAmbientColor *= 1.0 - 0.25 * rainFactor;
