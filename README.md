@@ -2,7 +2,7 @@
 
 ## What is Spooklementary?
 
-* Spooklementary, by SpacEagle17, is an edit of EminGT's [Complementary Shaders](https://www.complementary.dev). It transforms your game into a moody and spooky experience. Perfect for Halloween or scary maps!
+* Spooklementary, by SpacEagle17, is an edit of EminGT's [Complementary Shaders](https://www.complementary.dev). It is a horror themed shaderpack and transforms your game into a moody and spooky experience. Perfect for Halloween or scary maps!
 
 ### Important notice: Please don't report any bugs while using this add-on to Emin, but to me instead on Discord.
 
