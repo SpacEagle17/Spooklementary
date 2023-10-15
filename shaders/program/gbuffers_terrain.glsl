@@ -302,6 +302,17 @@ void main() {
 		}
 		#endif
 
+		#ifdef EMISSIVE_BLOOD_MOON_FLOWERS
+			else if (mat == 10733) {
+				if ((color.b > color.g || color.r * 1.3 > color.g) && blockUV.y > 0.4) {
+					float flowerEmissionMult = 0.0;
+					if (color.r > max(color.b * 1.15, color.g * 2.5) * 0.95) flowerEmissionMult = 1.0;
+					emission = 2.0 * flowerEmissionMult;
+					emission *= skyLightCheck * getBloodMoon(moonPhase, sunVisibility);
+				}
+			}
+		#endif
+
 		else if (lmCoord.x > 0.99999) lmCoordM.x = 0.95;
 	#endif
 

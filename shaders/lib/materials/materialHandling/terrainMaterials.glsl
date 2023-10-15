@@ -1995,13 +1995,23 @@ if (mat < 10512) {
                             if (mat == 10728) { // Flower Pot, Potted Stuff:Without Subsurface
                                 noSmoothLighting = true;
                             }
-                            else /*if (mat == 10732)*/ { // Potted Stuff:With Subsurface
+                            else /*if (mat == 10732 || mat == 10733)*/ { // Potted Stuff:With Subsurface
                                 noSmoothLighting = true;
                                 
                                 float NdotE = dot(normalM, eastVec);
                                 if (abs(abs(NdotE) - 0.5) < 0.4) {
                                     subsurfaceMode = 1, noDirectionalShading = true;
                                 }
+                                #if defined EMISSIVE_BLOOD_MOON_FLOWERS && defined GBUFFERS_TERRAIN
+                                    if (mat == 10733) {
+                                        if ((color.b > color.g || color.r * 1.3 > color.g) && blockUV.y > 0.4) {
+                                            float flowerEmissionMult = 0.0;
+                                            if (color.r > max(color.b * 1.15, color.g * 2.5) * 0.95) flowerEmissionMult = 1.0;
+                                            emission = 2.0 * flowerEmissionMult;
+                                            emission *= skyLightCheck * getBloodMoon(moonPhase, sunVisibility);
+                                        }
+                                    }
+                                #endif
                             }
                         }
                     }
