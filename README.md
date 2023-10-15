@@ -15,7 +15,7 @@
 
 * The whole look of the shaderpack got changed, things are much more desaturated and moody.
 * Blocklight flickers.
-* Eyes randomly appear in dark places.
+* Eyes randomly appear in dark places. Sometimes they are red.
 * Very rarely strange things can happen such as leaves disappearing (happens VERY rarely).
 * Emissives can flicker from time to time.
 * Lightning bolts light up the surroundings and also the clouds.
@@ -26,6 +26,8 @@
 * Full moons are blood moons.
 * Chromatic Aberration increases the longer you are in darkness, right before the cave sounds play one might notice some static noise.
 * It no longer rains if above clouds.
+* The screen can very rarely shake.
+* Red flowers are emissive during the blood moon.
   
 </p>
 </details>
