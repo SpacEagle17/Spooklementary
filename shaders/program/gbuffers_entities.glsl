@@ -56,7 +56,7 @@ uniform mat4 shadowModelView;
 uniform mat4 shadowProjection;
 
 uniform sampler2D tex;
-uniform sampler2D noisetex;
+
 
 #ifdef CUSTOM_PBR
 	uniform sampler2D normals;

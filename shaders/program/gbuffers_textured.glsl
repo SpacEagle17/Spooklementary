@@ -47,7 +47,7 @@ uniform mat4 shadowModelView;
 uniform mat4 shadowProjection;
 
 uniform sampler2D tex;
-uniform sampler2D noisetex;
+
 
 #ifdef VL_CLOUDS_ACTIVE
 	uniform sampler2D gaux1;

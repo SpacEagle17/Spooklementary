@@ -55,7 +55,7 @@ uniform float viewHeight;
 uniform float aspectRatio;
 
 uniform sampler2D tex;
-uniform sampler2D noisetex;
+
 
 #if WATER_STYLE >= 2
 	uniform sampler2D gaux4;

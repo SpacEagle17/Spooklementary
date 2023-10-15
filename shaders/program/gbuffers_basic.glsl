@@ -32,7 +32,7 @@ uniform mat4 gbufferModelViewInverse;
 uniform mat4 shadowModelView;
 uniform mat4 shadowProjection;
 
-uniform sampler2D noisetex;
+
 
 //Pipeline Constants//
 

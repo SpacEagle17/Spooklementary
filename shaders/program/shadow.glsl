@@ -23,7 +23,7 @@ uniform int isEyeInWater;
 uniform vec3 cameraPosition;
 
 uniform sampler2D tex;
-uniform sampler2D noisetex;
+
 
 #if WATER_CAUSTIC_STYLE >= 3
 	

@@ -38,7 +38,7 @@ uniform sampler2D depthtex1;
 	uniform mat4 shadowModelView;
 	uniform mat4 shadowProjection;
 	
-	uniform sampler2D noisetex;
+	
 #endif
 
 #if defined LIGHTSHAFTS_ACTIVE || defined NETHER_STORM

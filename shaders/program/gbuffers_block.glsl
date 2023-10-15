@@ -50,7 +50,7 @@ uniform mat4 shadowModelView;
 uniform mat4 shadowProjection;
 
 uniform sampler2D tex;
-uniform sampler2D noisetex;
+
 
 #if defined GENERATED_NORMALS || defined COATED_TEXTURES || defined POM
 	uniform ivec2 atlasSize;

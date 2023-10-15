@@ -38,7 +38,7 @@ uniform mat4 shadowProjection;
 uniform sampler2D colortex0;
 uniform sampler2D colortex1;
 uniform sampler2D depthtex0;
-uniform sampler2D noisetex;
+
 
 #if SSAO_QUALI > 0 || defined PBR_REFLECTIONS
 	uniform mat4 gbufferProjection;

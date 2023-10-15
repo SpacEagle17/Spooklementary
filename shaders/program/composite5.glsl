@@ -23,7 +23,7 @@ uniform float darknessFactor;
 
 
 uniform sampler2D colortex0;
-uniform sampler2D noisetex;
+
 
 #ifdef BLOOM
 	#ifndef LIGHT_COLORING

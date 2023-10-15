@@ -14,6 +14,7 @@ uniform vec4 lightningBoltPosition;
 uniform float lightningFlashOptifine;
 uniform float lightning;
 uniform int moonPhase;
+uniform sampler2D noisetex;
 
 //User Settings//
     #define SHADER_STYLE 4 //[1 4]
