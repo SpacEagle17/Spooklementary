@@ -243,8 +243,9 @@ void main() {
 
 	translucentMult.rgb = mix(translucentMult.rgb, vec3(1.0), min1(pow2(pow2(lViewPos / far))));
 
-	float bloodMoonVisibility = clamp01(1.0 - moonPhase - sunVisibility);
-	ambientColor *= mix(vec3(1.0), vec3(1.0, 0.0, 0.0) * 3.0, bloodMoonVisibility);
+	#if BLOOD_MOON > 0
+		ambientColor *= mix(vec3(1.0), vec3(1.0, 0.0, 0.0) * 3.0, getBloodMoon(moonPhase, sunVisibility));
+	#endif
 	
 	// Lighting
 	DoLighting(color, shadowMult, playerPos, viewPos, lViewPos, normalM, lmCoordM,

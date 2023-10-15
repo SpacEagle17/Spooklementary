@@ -81,9 +81,9 @@ void DoWave(inout vec3 playerPos, int mat) {
 
     #if defined GBUFFERS_TERRAIN || defined SHADOW
         #ifdef WAVING_FOLIAGE
-            if (mat == 10004) { // Grounded Waving Foliage
+            if (mat == 10003 || mat == 10004) { // Grounded Waving Foliage
                 DoWave_GroundedFoliage(playerPos.xyz, worldPos);
-            } else if (mat == 10020) { // Upper Layer Waving Foliage
+            } else if (mat == 10020 || mat == 10021) { // Upper Layer Waving Foliage
                 DoWave_Foliage(playerPos.xyz, worldPos);
             }
             

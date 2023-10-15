@@ -249,7 +249,7 @@ void main() {
 	#endif
 
 	#ifdef PERPENDICULAR_TWEAKS
-		if (mat == 10004 || mat == 10016) { // Foliage
+		if (mat == 10003 || mat == 10004 || mat == 10016) { // Foliage
 			vec2 midCoord = (gl_TextureMatrix[0] * mc_midTexCoord).st;
 			vec2 texMinMidCoord = texCoord - midCoord;
 			if (texMinMidCoord.y < 0.0) {

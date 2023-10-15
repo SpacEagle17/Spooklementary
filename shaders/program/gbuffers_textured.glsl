@@ -183,8 +183,9 @@ void main() {
 		bool noSmoothLighting = true;
 	#endif
 
-	float bloodMoonVisibility = clamp01(1.0 - moonPhase - sunVisibility);
-	ambientColor *= mix(vec3(1.0), vec3(1.0, 0.0, 0.0) * 3.0, bloodMoonVisibility);
+	#if BLOOD_MOON > 0
+		ambientColor *= mix(vec3(1.0), vec3(1.0, 0.0, 0.0) * 3.0, getBloodMoon(moonPhase, sunVisibility));
+	#endif
 
 	DoLighting(color, shadowMult, playerPos, viewPos, lViewPos, normal, lmCoordM,
 	           noSmoothLighting, false, true, false,

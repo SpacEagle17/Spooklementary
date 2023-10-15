@@ -79,6 +79,7 @@ float sunVisibility2 = sunVisibility * sunVisibility;
 float shadowTimeVar1 = abs(sunVisibility - 0.5) * 2.0;
 float shadowTimeVar2 = shadowTimeVar1 * shadowTimeVar1;
 float shadowTime = shadowTimeVar2 * shadowTimeVar2;
+float skyLightCheck = 0.0;
 
 #ifdef OVERWORLD
 	vec3 lightVec = sunVec * ((timeAngle < 0.5325 || timeAngle > 0.9675) ? 1.0 : -1.0);
@@ -123,6 +124,7 @@ float shadowTime = shadowTimeVar2 * shadowTimeVar2;
 
 //Program//
 void main() {
+	skyLightCheck = pow2(1.0 - min1(lmCoord.y * 2.9 * sunVisibility));
 	vec4 color = texture2D(tex, texCoord);
 	#ifdef GENERATED_NORMALS
 		vec3 colorP = color.rgb;
@@ -175,8 +177,9 @@ void main() {
 
 		normalM = gl_FrontFacing ? normalM : -normalM; // Inverted Normal Workaround
 
-		float bloodMoonVisibility = clamp01(1.0 - moonPhase - sunVisibility);
-		ambientColor *= mix(vec3(1.0), vec3(1.0, 0.0, 0.0) * 3.0, bloodMoonVisibility);
+		#if BLOOD_MOON > 0
+			ambientColor *= mix(vec3(1.0), vec3(1.0, 0.0, 0.0) * 3.0, getBloodMoon(moonPhase, sunVisibility));
+		#endif
 
 		DoLighting(color, shadowMult, playerPos, viewPos, lViewPos, normalM, lmCoordM,
 				   noSmoothLighting, false, false, true,

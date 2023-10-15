@@ -76,6 +76,18 @@ float retroNoise (vec2 noise){
 void main() {
 	vec2 texCoordM = texCoord;
 
+	float randomShutterTime = 24000 * hash1(worldDay * 5); // Effect happens randomly throughout the day
+	int displaceEffect = (int(hash1(worldDay / 2)) % (2 * 24000)) + int(randomShutterTime);
+	if (worldTime > displaceEffect && worldTime < displaceEffect + 100) { // 100 in ticks - 5s, how long the effect will be on
+		float scrollSpeed = 2.0;
+		float stutterSpeed = 0.2;
+		float scroll   = (1.0 - step(retroNoise(vec2(frameTimeCounter * 0.00002, 8.0)), 0.9)) * scrollSpeed;
+		float stutter  = (1.0 - step(retroNoise(vec2(frameTimeCounter * 0.00005, 9.0)), 0.8)) * stutterSpeed;
+		float stutter2 = (1.0 - step(retroNoise(vec2(frameTimeCounter * 0.00003, 5.0)), 0.7)) * stutterSpeed;
+		float verticalOffset = sin(frameTimeCounter) * scroll + stutter * stutter2;
+		texCoordM.y = mod(texCoordM.y + verticalOffset, 1.10);
+	}
+	
 	#ifdef UNDERWATER_DISTORTION
 		if (isEyeInWater == 1)
 			texCoordM += WATER_REFRACTION_INTENSITY * 0.00035 * sin((texCoord.x + texCoord.y) * 25.0 + frameTimeCounter * 3.0);

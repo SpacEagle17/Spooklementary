@@ -67,8 +67,9 @@ vec3 GetSky(float VdotU, float VdotS, float dither, bool doGlare, bool doGround)
 
             float glareWaterFactor = isEyeInWater * sunVisibility;
             vec3 moonGlareColor = vec3(0.502, 0.3804, 0.3804);
-            float bloodMoonVisibility = clamp01(1.0 - moonPhase - sunVisibility);
-            moonGlareColor = mix(moonGlareColor, vec3(1.0, 0.0, 0.0) * 1.5, bloodMoonVisibility);
+            #if BLOOD_MOON > 0
+                moonGlareColor = mix(moonGlareColor, vec3(1.0, 0.0, 0.0) * 1.5, getBloodMoon(moonPhase, sunVisibility));
+            #endif
             vec3 glareColor = mix(moonGlareColor * 0.7, vec3(0.5), sunVisibility);
                  glareColor = glareColor + glareWaterFactor * vec3(7.0);
             glare *= 0.5;

@@ -133,9 +133,11 @@ void main() {
 					                + texture2D(noisetex, starCoord * 5.0).g * 0.5;
 					moonNoise = max0(moonNoise - 0.75) * 1.7;
 					vec3 moonColorSpooky = vec3(0.38, 0.4, 0.5);
-					float bloodMoonVisibility = clamp01(1.0 - moonPhase - sunVisibility);
-					float moonNoiseIntensity = mix(1.0, 1.5, bloodMoonVisibility);
-					moonColorSpooky = mix(vec3(0.38, 0.4, 0.5), vec3(1.0, 0.0, 0.0), bloodMoonVisibility);
+					float moonNoiseIntensity = 1.0;
+					#if BLOOD_MOON > 0
+						moonNoiseIntensity = mix(1.0, 1.5, getBloodMoon(moonPhase, sunVisibility));
+						moonColorSpooky = mix(vec3(0.38, 0.4, 0.5), vec3(1.0, 0.0, 0.0), getBloodMoon(moonPhase, sunVisibility));
+					#endif
 					vec3 moonColor = moonColorSpooky * (1.2 - (0.2 + 0.2 * sqrt1(nightFactor)) * moonNoise * moonNoiseIntensity);
 
 					if (moonPhase >= 1) {

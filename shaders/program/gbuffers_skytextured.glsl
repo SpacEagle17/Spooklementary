@@ -80,8 +80,9 @@ void main() {
 				color.rgb *= 0.25 + (0.75 - 0.25 * rainFactor) * sunVisibility2;
 			} else { // Moon
 				color.rgb *= smoothstep1(min1(length(color.rgb))) * 1.3;
-				float bloodMoonVisibility = clamp01(1.0 - moonPhase - sunVisibility);
-				color.rgb = mix(color.rgb, GetLuminance(color.rgb) * vec3(1.0, 0.0, 0.0) * 1.5, bloodMoonVisibility);
+				#if BLOOD_MOON > 0
+					color.rgb = mix(color.rgb, GetLuminance(color.rgb) * vec3(1.0, 0.0, 0.0) * 1.5, getBloodMoon(moonPhase, sunVisibility));
+				#endif
 			}
 
 			color.rgb *= GetHorizonFactor(VdotU);

@@ -163,6 +163,10 @@ screen.SELECT_OUTLINE_SETTINGS.comment=Settings that change the block selection 
 screen.WORLD_OUTLINE_SETTINGS=World Outline
 screen.WORLD_OUTLINE_SETTINGS.comment=Settings that are about optional outline effects.
 
+screen.SPOOKY_SETTINGS=Spooklementary Settings
+screen.EYES_SETTINGS=Eyes Settings
+screen.BLOOD_MOON_SETTINGS=Blood Moon Settings
+
 #Settings
 option.RP_MODE=RP Support
 option.RP_MODE.comment=Changes many internal calculations to determine how different blocks and materials will be rendered. §bIntegrated PBR+§r: Calculated PBR and extra effects, highly recommended for most use cases. §aBasic§r: No PBR or extra effects. §elabPBR/seuspbr§r: Materials using the required PBR resource packs.
@@ -875,3 +879,13 @@ option.ATM_END_I=Atmosphere Intensity Multiplier
 option.XLIGHT_R=Blocklight Red Multiplier
 option.XLIGHT_G=Blocklight Green Multiplier
 option.XLIGHT_B=Blocklight Blue Multiplier
+
+option.EYES=Eyes
+option.EYE_FREQUENCY=Eye Frequency
+option.EYE_SPEED=Eye Speed
+option.EYE_RED_PROBABILITY=Red Eyes Probability
+option.BLOOD_MOON=Blood Mood
+value.BLOOD_MOON.0=Off
+value.BLOOD_MOON.1=On - Full Moon
+value.BLOOD_MOON.2=On - Every Night
+option.EMISSIVE_BLOOD_MOON_FLOWERS=Emissive Blood Moon Flowers

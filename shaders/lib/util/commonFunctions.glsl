@@ -251,6 +251,16 @@ vec2 lightningFlashEffect(vec3 playerPos, vec3 lightningBoltPosition, vec3 norma
     return vec2(lightningLight * NdotL, lightningLight);
 }
 
+float getBloodMoon(int moonPhase, float sunVisibility) {
+    float visibility = 1.0 - sunVisibility;
+    #if BLOOD_MOON == 0
+        visibility = 0.0;
+    #elif BLOOD_MOON == 1
+        visibility -= moonPhase;
+    #endif
+    return clamp(visibility, 0.0, 1.0);
+}
+
 float hash1( uint n ){
     // The MIT License
     // Copyright © 2017 Inigo Quilez

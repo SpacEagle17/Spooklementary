@@ -8,7 +8,7 @@ if (mat < 10512) {
                             if (mat == 10000) { // No directional shading
                                 noDirectionalShading = true;
                             } 
-                            else if (mat == 10004) { // Grounded Waving Foliage
+                            else if (mat == 10003 || mat == 10004) { // Grounded Waving Foliage
                                 subsurfaceMode = 1, noSmoothLighting = true, noDirectionalShading = true;
 
                                 #ifdef GBUFFERS_TERRAIN
@@ -18,6 +18,17 @@ if (mat < 10512) {
                                 #ifndef REALTIME_SHADOWS
                                     shadowMult *= 1.0 - 0.3 * (signMidCoordPos.y + 1.0) * (1.0 - abs(signMidCoordPos.x))
                                     + 0.5 * (1.0 - signMidCoordPos.y) * invNoonFactor; // consistency357381
+                                #endif
+
+                                #ifdef EMISSIVE_BLOOD_MOON_FLOWERS
+                                    if (mat == 10003) { // Flowers+
+                                        if (color.b > color.g || color.r * 1.3 > color.g) {
+                                            float flowerEmissionMult = 0.0;
+                                            if (color.r > max(color.b * 1.15, color.g * 2.5) * 0.95) flowerEmissionMult = 1.0;
+                                            emission = 2.0 * flowerEmissionMult;
+                                            emission *= skyLightCheck * getBloodMoon(moonPhase, sunVisibility);
+                                        }
+                                    }
                                 #endif
                             }
                         } else {
@@ -34,7 +45,7 @@ if (mat < 10512) {
                             if (mat == 10016) { // Non-waving Foliage
                                 subsurfaceMode = 1, noSmoothLighting = true, noDirectionalShading = true;
                             }
-                            else /*if (mat == 10020)*/ { // Upper Waving Foliage
+                            else /*if (mat == 10020 || mat == 10021)*/ { // Upper Waving Foliage
                                 subsurfaceMode = 1, noSmoothLighting = true, noDirectionalShading = true;
 
                                 #ifdef GBUFFERS_TERRAIN
@@ -43,6 +54,16 @@ if (mat < 10512) {
 
                                 #ifndef REALTIME_SHADOWS
                                     shadowMult *= 1.0 + invNoonFactor; // consistency357381
+                                #endif
+                                #ifdef EMISSIVE_BLOOD_MOON_FLOWERS
+                                    if (mat == 10021) {
+                                        if (color.b > color.g || color.r * 1.3 > color.g) {
+                                            float flowerEmissionMult = 0.0;
+                                            if (color.r > max(color.b * 1.15, color.g * 2.5) * 0.95) flowerEmissionMult = 1.0;
+                                            emission = 2.0 * flowerEmissionMult;
+                                            emission *= skyLightCheck * getBloodMoon(moonPhase, sunVisibility);
+                                        }
+                                    }
                                 #endif
                             }
                         } else {

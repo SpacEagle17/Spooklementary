@@ -204,27 +204,29 @@ void main() {
 
 	float lavaNoiseIntensity = 1.0;
 
-	vec3 eyes1 = vec3(0.0);
-	vec3 eyes2 = vec3(0.0);
-	float sideRandom = hash13(mod(floor(worldPos + atMidBlock / 64) + frameTimeCounter * 0.00001, vec3(100)));
-	vec3 blockUVM = blockUV;
-	if(step(0.5, sideRandom) > 0.0) { // Randomly make eyes visible only on either the x or z axis
-		blockUVM.x = 0.0;
-	} else {
-		blockUVM.z = 0.0;
-	}
-	float spookyEyesFrequency = 1.0;
-	float spookyEyesSpeed = 1.0;
+	#ifdef EYES
+		vec3 eyes1 = vec3(0.0);
+		vec3 eyes2 = vec3(0.0);
+		float sideRandom = hash13(mod(floor(worldPos + atMidBlock / 64) + frameTimeCounter * 0.00001, vec3(100)));
+		vec3 blockUVM = blockUV;
+		if(step(0.5, sideRandom) > 0.0) { // Randomly make eyes visible only on either the x or z axis
+			blockUVM.x = 0.0;
+		} else {
+			blockUVM.z = 0.0;
+		}
+		float spookyEyesFrequency = EYE_FREQUENCY;
+		float spookyEyesSpeed = EYE_SPEED;
 
-	float randomEyesTime = 24000 * hash1(worldDay * 3); // Effect happens randomly throughout the day
-	int moreEyesEffect = (int(hash1(worldDay / 2)) % (2 * 24000)) + int(randomEyesTime);
-	if (worldTime > moreEyesEffect && worldTime < moreEyesEffect + 30) { // 30 in ticks - 1.5s, how long the effect will be on
-		spookyEyesFrequency = 20.0; // make eyes appear everywhere
-	}
-	if((blockUVM.x > 0.15 && blockUVM.x < 0.43 || blockUVM.x < 0.85 && blockUVM.x > 0.57 || blockUVM.z > 0.15 && blockUVM.z < 0.43 || blockUVM.z < 0.85 && blockUVM.z > 0.57) && blockUVM.y > 0.42 && blockUVM.y < 0.58 && abs(clamp01(dot(normal, upVec))) < 0.99) eyes1 = vec3(1.0); // Eye Shape 1 Horizontal
-	if((blockUVM.x > 0.65 && blockUVM.x < 0.8 || blockUVM.x < 0.35 && blockUVM.x > 0.2 || blockUVM.z > 0.65 && blockUVM.z < 0.8 || blockUVM.z < 0.35 && blockUVM.z > 0.2) && blockUVM.y > 0.3 && blockUVM.y < 0.7 && abs(clamp01(dot(normal, upVec))) < 0.99) eyes2 = vec3(1.0); // Eye Shape 2 Vertical
-	vec3 spookyEyes = mix(eyes1, eyes2, step(0.75, hash13(mod(floor(worldPos + atMidBlock / 64) + frameTimeCounter * 0.00005, vec3(100))))); // have either eye shape 1 or 2 randomly, the horizontal ones have a 0.75 to 0.25 higher probability of appearing
-	spookyEyes *= vec3(step(1.0075 - spookyEyesFrequency * 0.01, hash13(mod(floor(worldPos + atMidBlock / 64) + frameTimeCounter * 0.0000005 * spookyEyesSpeed, vec3(100))))); // Make them appear randomly and much less
+		float randomEyesTime = 24000 * hash1(worldDay * 3); // Effect happens randomly throughout the day
+		int moreEyesEffect = (int(hash1(worldDay / 2)) % (2 * 24000)) + int(randomEyesTime);
+		if (worldTime > moreEyesEffect && worldTime < moreEyesEffect + 30) { // 30 in ticks - 1.5s, how long the effect will be on
+			spookyEyesFrequency = 20.0; // make eyes appear everywhere
+		}
+		if((blockUVM.x > 0.15 && blockUVM.x < 0.43 || blockUVM.x < 0.85 && blockUVM.x > 0.57 || blockUVM.z > 0.15 && blockUVM.z < 0.43 || blockUVM.z < 0.85 && blockUVM.z > 0.57) && blockUVM.y > 0.42 && blockUVM.y < 0.58 && abs(clamp01(dot(normal, upVec))) < 0.99) eyes1 = vec3(1.0); // Eye Shape 1 Horizontal
+		if((blockUVM.x > 0.65 && blockUVM.x < 0.8 || blockUVM.x < 0.35 && blockUVM.x > 0.2 || blockUVM.z > 0.65 && blockUVM.z < 0.8 || blockUVM.z < 0.35 && blockUVM.z > 0.2) && blockUVM.y > 0.3 && blockUVM.y < 0.7 && abs(clamp01(dot(normal, upVec))) < 0.99) eyes2 = vec3(1.0); // Eye Shape 2 Vertical
+		vec3 spookyEyes = mix(eyes1, eyes2, step(0.75, hash13(mod(floor(worldPos + atMidBlock / 64) + frameTimeCounter * 0.00005, vec3(100))))); // have either eye shape 1 or 2 randomly, the horizontal ones have a 0.75 to 0.25 higher probability of appearing
+		spookyEyes *= vec3(step(1.0075 - spookyEyesFrequency * 0.01, hash13(mod(floor(worldPos + atMidBlock / 64) + frameTimeCounter * 0.0000005 * spookyEyesSpeed, vec3(100))))); // Make them appear randomly and much less
+	#endif
 
 	#ifdef IPBR
 		vec3 maRecolor = vec3(0.0);
@@ -244,9 +246,19 @@ void main() {
 
 		if (mat == 10000) { // No directional shading
 			noDirectionalShading = true;
-		} else if (mat == 10004) { // Grounded Waving Foliage
+		} else if (mat == 10003 || mat == 10004) { // Grounded Waving Foliage
 			subsurfaceMode = 1, noSmoothLighting = true, noDirectionalShading = true;
 			DoFoliageColorTweaks(color.rgb, shadowMult, snowMinNdotU, lViewPos);
+			#ifdef EMISSIVE_BLOOD_MOON_FLOWERS
+				if (mat == 10003) { // Flowers+
+					if (color.b > color.g || color.r * 1.3 > color.g) {
+						float flowerEmissionMult = 0.0;
+						if (color.r > max(color.b * 1.15, color.g * 2.5) * 0.95) flowerEmissionMult = 1.0;
+						emission = 2.0 * flowerEmissionMult;
+						emission *= skyLightCheck * getBloodMoon(moonPhase, sunVisibility);
+					}
+				}
+			#endif
 		} else if (mat == 10008) { // Leaves
 			#include "/lib/materials/specificMaterials/terrain/leaves.glsl"
 		} else if (mat == 10012) { // Vine
@@ -254,9 +266,19 @@ void main() {
 			centerShadowBias = true;
 		} else if (mat == 10016) { // Non-waving Foliage
 			subsurfaceMode = 1, noSmoothLighting = true, noDirectionalShading = true;
-		} else if (mat == 10020) { // Upper Waving Foliage
+		} else if (mat == 10020 || mat == 10021) { // Upper Waving Foliage
 			subsurfaceMode = 1, noSmoothLighting = true, noDirectionalShading = true;
 			DoFoliageColorTweaks(color.rgb, shadowMult, snowMinNdotU, lViewPos);
+			#ifdef EMISSIVE_BLOOD_MOON_FLOWERS
+				if (mat == 10021) { // Flowers Upper+
+					if (color.b > color.g || color.r * 1.3 > color.g) {
+						float flowerEmissionMult = 0.0;
+						if (color.r > max(color.b * 1.15, color.g * 2.5) * 0.95) flowerEmissionMult = 1.0;
+						emission = 2.0 * flowerEmissionMult;
+						emission *= skyLightCheck * getBloodMoon(moonPhase, sunVisibility);
+					}
+				}
+			#endif
 		} else if (mat == 10744) { // Cobweb
 			subsurfaceMode = 1, noSmoothLighting = true, noDirectionalShading = true;
 			centerShadowBias = true;
@@ -350,8 +372,9 @@ void main() {
 		#include "/lib/misc/showLightLevels.glsl"
 	#endif
 
-	float bloodMoonVisibility = clamp01(1.0 - moonPhase - sunVisibility);
-	ambientColor *= mix(vec3(1.0), vec3(1.0, 0.0, 0.0) * 3.0, bloodMoonVisibility);
+	#if BLOOD_MOON > 0
+		ambientColor *= mix(vec3(1.0), vec3(1.0, 0.0, 0.0) * 3.0, getBloodMoon(moonPhase, sunVisibility));
+	#endif
 
 	if (mat != 10068 && mat != 10069) { // Lava
 		float noiseAdd = hash13(mod(floor(worldPos + atMidBlock / 64) + frameTimeCounter * 0.000001, vec3(100)));
@@ -366,11 +389,13 @@ void main() {
 		color.rgb += maRecolor;
 	#endif
 
-	vec2 flickerEyeNoise = texture2D(noisetex, vec2(frameTimeCounter * 0.025 + hash13(mod(floor(worldPos + atMidBlock / 64) + frameTimeCounter * 0.000001, vec3(100))))).rb;
-	if (length(playerPos) > 8.0) {
-		vec3 eyesColor = mix(vec3(1.0), vec3(3.0, 0.0, 0.0), vec3(step(0.93, hash13(mod(floor(worldPos + atMidBlock / 64) + frameTimeCounter * 0.000002, vec3(100)))))); // Make Red eyes appear rarely, 7% chance
-		color.rgb += spookyEyes * 3.0 * skyLightCheck * min1(max(flickerEyeNoise.r, flickerEyeNoise.g)) * clamp((1.0 - 1.15 * lmCoord.x) * 10.0, 0.0, 1.0) * eyesColor;
-	}
+	#ifdef EYES
+		vec2 flickerEyeNoise = texture2D(noisetex, vec2(frameTimeCounter * 0.025 + hash13(mod(floor(worldPos + atMidBlock / 64) + frameTimeCounter * 0.000001, vec3(100))))).rb;
+		if (length(playerPos) > 8.0) {
+			vec3 eyesColor = mix(vec3(1.0), vec3(3.0, 0.0, 0.0), vec3(step(1.0 - EYE_RED_PROBABILITY * mix(1.0, 2.0, getBloodMoon(moonPhase, sunVisibility)), hash13(mod(floor(worldPos + atMidBlock / 64) + frameTimeCounter * 0.0000002, vec3(500)))))); // Make Red eyes appear rarely, 7% chance
+			color.rgb += spookyEyes * 3.0 * skyLightCheck * min1(max(flickerEyeNoise.r, flickerEyeNoise.g)) * clamp((1.0 - 1.15 * lmCoord.x) * 10.0, 0.0, 1.0) * eyesColor;
+		}
+	#endif
 
 	#ifdef PBR_REFLECTIONS
 		#ifdef OVERWORLD
