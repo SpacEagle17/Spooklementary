@@ -1,6 +1,7 @@
-////////////////////////////////////////
-// Complementary Reimagined by EminGT //
-////////////////////////////////////////
+/////////////////////////////////////
+// Complementary Shaders by EminGT //
+// Spooklementary edit by SpacEagle17
+/////////////////////////////////////
 
 //Common//
 #include "/lib/common.glsl"
@@ -10,233 +11,199 @@
 
 noperspective in vec2 texCoord;
 
-flat in vec3 upVec, sunVec;
+in vec3 sunVec;
 
-#ifdef LIGHTSHAFTS_ACTIVE
-	flat in float vlFactor;
+#ifdef END
+    in float vlFactor;
 #endif
-
-//Uniforms//
-uniform int isEyeInWater;
-
-uniform float far, near;
-uniform float viewWidth, viewHeight;
-
-uniform vec3 cameraPosition;
-
-uniform mat4 gbufferProjectionInverse;
-
-uniform sampler2D colortex0;
-uniform sampler2D depthtex0;
-uniform sampler2D depthtex1;
-
-#if defined LIGHTSHAFTS_ACTIVE || WATER_QUALITY >= 3 || defined NETHER_STORM
-	
-
-	uniform mat4 gbufferProjection;
-	uniform mat4 gbufferModelViewInverse;
-	uniform mat4 shadowModelView;
-	uniform mat4 shadowProjection;
-	
-	
-#endif
-
-#if defined LIGHTSHAFTS_ACTIVE || defined NETHER_STORM
-	uniform int frameCounter;
-
-	#ifndef LIGHT_COLORING
-		uniform sampler2D colortex3;
-	#else
-		uniform sampler2D colortex8;
-	#endif
-#endif
-
-#ifdef LIGHTSHAFTS_ACTIVE
-	//uniform float viewWidth, viewHeight;
-	uniform float blindness;
-	uniform float darknessFactor;
-	uniform float frameTime;
-	uniform float frameTimeSmooth;
-
-	uniform ivec2 eyeBrightness;
-
-	uniform vec3 skyColor;
-
-	uniform sampler2D shadowtex0;
-	uniform sampler2DShadow shadowtex1;
-	uniform sampler2D shadowcolor1;
-#endif
-
-#if WATER_QUALITY >= 3
-	uniform sampler2D colortex1;
-#endif
-
-#if defined LIGHTSHAFTS_ACTIVE && defined LENSFLARE
-	uniform sampler2D colortex4;
-#endif
-
-uniform float wetness;
-uniform float inRainy;
 
 //Pipeline Constants//
-//const bool colortex0MipmapEnabled = true;
 
 //Common Variables//
+vec3 upVec = normalize(gbufferModelView[1].xyz);
+vec3 eastVec = normalize(gbufferModelView[0].xyz);
+vec3 northVec = normalize(gbufferModelView[2].xyz);
+#ifdef OVERWORLD
+    vec3 lightVec = sunVec * ((timeAngle < 0.5325 || timeAngle > 0.9675) ? 1.0 : -1.0);
+#else
+    vec3 lightVec = sunVec;
+#endif
 float SdotU = dot(sunVec, upVec);
 float sunFactor = SdotU < 0.0 ? clamp(SdotU + 0.375, 0.0, 0.75) / 0.75 : clamp(SdotU + 0.03125, 0.0, 0.0625) / 0.0625;
 float sunVisibility = clamp(SdotU + 0.0625, 0.0, 0.125) / 0.125;
 float sunVisibility2 = sunVisibility * sunVisibility;
+float shadowTimeVar1 = abs(sunVisibility - 0.5) * 2.0;
+float shadowTimeVar2 = shadowTimeVar1 * shadowTimeVar1;
+float shadowTime = shadowTimeVar2 * shadowTimeVar2;
+float farMinusNear = far - near;
+float z0;
+float z1;
 
 vec2 view = vec2(viewWidth, viewHeight);
 
-#ifdef OVERWORLD
-	vec3 lightVec = sunVec * ((timeAngle < 0.5325 || timeAngle > 0.9675) ? 1.0 : -1.0);
-#else
-	vec3 lightVec = sunVec;
-#endif
-
-#ifdef LIGHTSHAFTS_ACTIVE
-	float shadowTimeVar1 = abs(sunVisibility - 0.5) * 2.0;
-	float shadowTimeVar2 = shadowTimeVar1 * shadowTimeVar1;
-	float shadowTime = shadowTimeVar2 * shadowTimeVar2;
-	float vlTime = min(abs(SdotU) - 0.05, 0.15) / 0.15;
-#endif
-
 //Common Functions//
+float GetLinearDepth(float depth) {
+    return (2.0 * near) / (far + near - depth * (far - near));
+}
 
 //Includes//
-#include "/lib/atmospherics/fog/waterFog.glsl"
+#include "/lib/util/spaceConversion.glsl"
+#include "/lib/util/dither.glsl"
+#include "/lib/atmospherics/fog/mainFog.glsl"
+#include "/lib/colors/skyColors.glsl"
+#include "/lib/colors/lightAndAmbientColors.glsl"
+#include "/lib/materials/materialMethods/reflections.glsl"
 
-#ifdef BLOOM_FOG_COMPOSITE
-	#include "/lib/atmospherics/fog/bloomFog.glsl"
+#ifdef ATM_COLOR_MULTS
+    #include "/lib/colors/colorMultipliers.glsl"
 #endif
-
-#ifdef LIGHTSHAFTS_ACTIVE
-	#ifdef END
-		#include "/lib/atmospherics/enderBeams.glsl"
-	#endif
-	#include "/lib/atmospherics/volumetricLight.glsl"
-#endif
-
-#if WATER_QUALITY >= 3 || defined NETHER_STORM
-	#include "/lib/util/spaceConversion.glsl"
-#endif
-
-#if WATER_QUALITY >= 3
-	#include "/lib/materials/materialMethods/refraction.glsl"
-#endif
-
-#ifdef NETHER_STORM
-	#include "/lib/atmospherics/netherStorm.glsl"
-#endif
-
-#include "/lib/colors/colorMultipliers.glsl"
 
 //Program//
 void main() {
-	vec3 color = texelFetch(colortex0, texelCoord, 0).rgb;
-	float z0 = texelFetch(depthtex0, texelCoord, 0).r;
-	float z1 = texelFetch(depthtex1, texelCoord, 0).r;
+    ivec2 texelCoord = ivec2(texCoord * view);
+    vec4 color = texelFetch(colortex0, texelCoord, 0);
+    vec4 texture4 = texelFetch(colortex4, texelCoord, 0);
+    
+    z0 = texelFetch(depthtex0, texelCoord, 0).r;
+    z1 = texelFetch(depthtex1, texelCoord, 0).r;
 
-	#if defined LIGHTSHAFTS_ACTIVE || WATER_QUALITY >= 3 || defined BLOOM_FOG_COMPOSITE || defined NETHER_STORM
-		vec4 screenPos = vec4(texCoord, z0, 1.0);
-		vec4 viewPos = gbufferProjectionInverse * (screenPos * 2.0 - 1.0);
-		viewPos /= viewPos.w;
-		float lViewPos = length(viewPos.xyz);
-	#endif
+    #ifdef ATM_COLOR_MULTS
+        atmColorMult = GetAtmColorMult();
+        sqrtAtmColorMult = sqrt(atmColorMult);
+    #endif
 
-	#if WATER_QUALITY >= 3
-		DoRefraction(color, z0, z1, viewPos.xyz, lViewPos);
-	#endif
+    vec4 reflectOutput = vec4(0.0);
+    if (
+        z0 < 1.0
+        #if WORLD_SPACE_REFLECTIONS_INTERNAL == -1 || WATER_REFLECT_QUALITY <= 0
+            && z0 == z1
+        #endif
+    ) {
+        vec3 texture6 = texelFetch(colortex6, texelCoord, 0).rgb;
+        vec3 texture8 = texelFetch(colortex8, texelCoord, 0).rgb;
+        vec3 normalM = mat3(gbufferModelView) * texture4.rgb;
+        vec4 screenPos = vec4(texCoord, z0, 1.0);
+        vec4 viewPos = gbufferProjectionInverse * (screenPos * 2.0 - 1.0);
+        viewPos /= viewPos.w;
+        float lViewPos = length(viewPos);
+        vec3 nViewPos = normalize(viewPos.xyz);
+        vec3 playerPos = ViewToPlayer(viewPos.xyz);
+        bool entityOrHand = z0 < 0.56;
 
-	vec4 volumetricEffect = vec4(0.0);
+        float dither = texture2DLod(noisetex, gl_FragCoord.xy / 128.0, 0.0).b;
+        #if defined TAA || defined PBR_REFLECTIONS
+            dither = fract(dither + goldenRatio * mod(float(frameCounter), 3600.0));
+        #endif
 
-	#if defined LIGHTSHAFTS_ACTIVE || defined NETHER_STORM
-		/* The "1.0 - translucentMult" trick is done because of the default color attachment
-		value being vec3(0.0). This makes it vec3(1.0) to avoid issues especially on improved glass */
-		#ifndef LIGHT_COLORING
-			vec3 translucentMult = 1.0 - texelFetch(colortex3, texelCoord, 0).rgb;
-		#else
-			vec3 translucentMult = 1.0 - texelFetch(colortex8, texelCoord, 0).rgb;
-		#endif
+        int materialMaskInt = int(texture6.g * 255.1);
+        float skyLightFactor = texture6.b;
+        float smoothnessD = texture6.r;
+        float fresnelM = texture4.a;
+        float intenseFresnel = 0.0;
+        float ssao = 1.0;
+        vec3 reflectColor = vec3(1.0);
 
-		float dither = texture2D(noisetex, texCoord * view / 128.0).b;
-		#ifdef TAA
-			dither = fract(dither + 1.61803398875 * mod(float(frameCounter), 3600.0));
-		#endif
+        #include "/lib/materials/materialHandling/deferredMaterials.glsl"
 
-		vec4 screenPos1 = vec4(texCoord, z1, 1.0);
-		vec4 viewPos1 = gbufferProjectionInverse * (screenPos1 * 2.0 - 1.0);
-		viewPos1 /= viewPos1.w;
-		float lViewPos1 = length(viewPos1.xyz);
-	#endif
+        float fresnel = clamp(1.0 + dot(normalM, nViewPos), 0.0, 1.0);
 
-	#ifdef LIGHTSHAFTS_ACTIVE
-		vec3 nViewPos = normalize(viewPos.xyz);
-		float VdotL = dot(nViewPos, lightVec);
-	#endif
+        if (fresnelM > 0.0) {
+            #ifdef TAA
+                float noiseMult = 0.3;
+            #else
+                float noiseMult = 0.3;
+            #endif
+            #ifdef PBR_REFLECTIONS
+                bool opaqueSurface = z0 == z1;
+                float minBlendFactor = 0.035 + 0.09 * pow2(pow2(pow2(smoothnessD)));
 
-	#ifdef LIGHTSHAFTS_ACTIVE
-		float vlFactorM = vlFactor;
+                if (entityOrHand) {
+                    noiseMult *= 0.125;
+                    minBlendFactor = 0.125;
+                    if (!opaqueSurface) reflectColor = vec3(0.0);
+                }
+            #endif
+            noiseMult *= pow2(1.0 - smoothnessD);
 
-		float VdotU = dot(nViewPos, upVec);
+            vec2 roughCoord = gl_FragCoord.xy / 128.0;
+            vec3 roughNoise = vec3(
+                texture2DLod(noisetex, roughCoord, 0.0).r,
+                texture2DLod(noisetex, roughCoord + 0.09375, 0.0).r,
+                texture2DLod(noisetex, roughCoord + 0.1875, 0.0).r
+            );
+            roughNoise = fract(roughNoise + vec3(dither, dither * goldenRatio, dither * pow2(goldenRatio)));
+            roughNoise = noiseMult * (roughNoise - vec3(0.5));
 
-		volumetricEffect = GetVolumetricLight(color, vlFactorM, translucentMult, lViewPos1, nViewPos, VdotL, VdotU, texCoord, z0, z1, dither);
-	#endif
+            vec3 refNormal = normalM + roughNoise;
 
-	#ifdef NETHER_STORM
-		vec3 playerPos = ViewToPlayer(viewPos.xyz);
+            vec4 reflection = GetReflection(refNormal, viewPos.xyz, nViewPos, playerPos, lViewPos, z0,
+                                            depthtex1, dither, skyLightFactor, fresnel,
+                                            smoothnessD, vec3(0.0), vec3(0.0), vec3(0.0), 0.0);
+            
+            reflection.rgb *= reflectColor;
+            reflectOutput = reflection;
 
-		volumetricEffect = GetNetherStorm(color, translucentMult, playerPos, viewPos.xyz, lViewPos, lViewPos1, dither);
-	#endif
-		
-	volumetricEffect.rgb *= GetAtmColorMult();
+            #ifdef PBR_REFLECTIONS
+                if (opaqueSurface) {
+                    refDist = min(refDist, far - lViewPos);
+                    vec4 virtualRefPos = vec4(viewPos.xyz + refDist * nViewPos, 1.0);
+                    vec4 playerVirtualRefPos = gbufferModelViewInverse * virtualRefPos; // note: don't need to do perspective division with model view matrix
+                    vec4 virtualPrevRefPos = playerVirtualRefPos;
+                    virtualPrevRefPos.xyz -= previousCameraPosition - cameraPosition;
+                    virtualPrevRefPos = gbufferPreviousProjection * (gbufferPreviousModelView * virtualPrevRefPos);
+                    virtualPrevRefPos.xyz = 0.5 * virtualPrevRefPos.xyz / virtualPrevRefPos.w + 0.5;
+                    virtualPrevRefPos.z = min(1, virtualPrevRefPos.z);
+                    if (virtualPrevRefPos.xyz == clamp01(virtualPrevRefPos.xyz)) {
+                        vec4 prevPos = gbufferProjection * (
+                            gbufferModelView * vec4(
+                                playerPos + (cameraPosition - previousCameraPosition) +
+                                gbufferModelViewInverse[3].xyz - transpose(mat3(gbufferPreviousModelView)) * gbufferPreviousModelView[3].xyz
+                                , 1.0
+                            )
+                        );
+                        prevPos.xyz = 0.5 * prevPos.xyz / prevPos.w + 0.5;
+                        virtualPrevRefPos.xy *= view;
+                        virtualPrevRefPos.xy = (
+                            smoothstep(0, 1, smoothstep(0, 1, fract(virtualPrevRefPos.xy - 0.5))) +
+                            floor(virtualPrevRefPos.xy - 0.5) +
+                            0.5
+                        ) / view;
 
-	#ifdef NETHER_STORM
-		if (isEyeInWater == 0) color = mix(color, volumetricEffect.rgb, volumetricEffect.a);
-	#endif
-	
-	if (isEyeInWater == 1) {
-		if (z0 == 1.0) color.rgb = waterFogColor;
+                        float linearZ1 = GetLinearDepth(z1);
+                        vec2 pixelMovement = view * (prevPos.xy - texCoord);
+                        vec3 prevNormalM = mat3(gbufferModelView) * texture2D(colortex1, virtualPrevRefPos.xy).rgb;
 
-		vec3 underwaterMult = vec3(0.80, 0.87, 0.97);
-		color.rgb *= underwaterMult * 0.85;
-		volumetricEffect.rgb *= pow2(underwaterMult * 0.71);
-	} else {
-		if (isEyeInWater == 2) {
-			if (z1 == 1.0) color.rgb = fogColor * 5.0;
-			
-			volumetricEffect.rgb *= 0.0;
-		}
-	}
-	
-	color = pow(color, vec3(2.2));
-	
-	#ifdef LIGHTSHAFTS_ACTIVE
-		#ifdef END
-			volumetricEffect.rgb *= volumetricEffect.rgb;
-		#endif
-		
-		color += volumetricEffect.rgb;
-	#endif
+                        vec4 prevRefCurrentPosHeuristic = playerVirtualRefPos;
+                        prevRefCurrentPosHeuristic.xyz += normalize(previousCameraPosition - cameraPosition - playerVirtualRefPos.xyz) * refDist;
+                        prevRefCurrentPosHeuristic = gbufferProjection * (gbufferModelView * prevRefCurrentPosHeuristic);
+                        prevRefCurrentPosHeuristic.xyz = 0.5 * prevRefCurrentPosHeuristic.xyz / prevRefCurrentPosHeuristic.w + 0.5;
 
-	#ifdef BLOOM_FOG_COMPOSITE
-		color *= GetBloomFog(lViewPos); // Reminder: Bloom Fog can move between composite1-2-3
-	#endif
+                        vec4 prevRef = texture2D(colortex7, virtualPrevRefPos.xy);
+                        float prevValid = exp(
+                            - 0.03 * length(view * (virtualPrevRefPos.xy - texCoord))
+                            - min(0.75, 10.0 * sqrt(length(cameraPosition - previousCameraPosition)))
+                            - 0.003 * length(pixelMovement)
+                            - 12.0 * length(normalM - prevNormalM)
+                            - abs(prevRef.a - linearZ1) * far / 1.0
+                            - 10 * length(prevRefCurrentPosHeuristic.xy - clamp01(prevRefCurrentPosHeuristic.xy))
+                        );
 
-	/* DRAWBUFFERS:0 */
-	gl_FragData[0] = vec4(color, 1.0);
-	
-	// a.k.a #if defined LIGHTSHAFTS_ACTIVE && (LIGHTSHAFT_BEHAVIOUR == 1 && SHADOW_QUALITY >= 1 || defined END)
-	#if LIGHTSHAFT_QUALI_DEFINE > 0 && LIGHTSHAFT_BEHAVIOUR == 1 && SHADOW_QUALITY >= 1 && defined OVERWORLD && defined REALTIME_SHADOWS || defined END
-		#ifdef LENSFLARE
-			if (viewWidth + viewHeight - gl_FragCoord.x - gl_FragCoord.y > 1.5)
-				vlFactorM = texelFetch(colortex4, texelCoord, 0).r;
-		#endif
+                        reflectOutput.rgb = mix(prevRef.rgb, reflectOutput.rgb, min1(minBlendFactor / prevValid));
+                        reflectOutput.a = linearZ1;
+                    }
+                }
+            #endif
+        }
+    }
 
-		/* DRAWBUFFERS:04 */
-		gl_FragData[1] = vec4(vlFactorM, 0.0, 0.0, 1.0);
-	#endif
+    /* DRAWBUFFERS:7 */
+    gl_FragData[0] = reflectOutput;
+
+    // same check as #ifdef PBR_REFLECTIONS but for Optifine to understand:
+    #if BLOCK_REFLECT_QUALITY >= 2 && RP_MODE >= 1
+        /* DRAWBUFFERS:71 */
+        gl_FragData[1] = vec4(texture4.rgb, 1.0);
+    #endif
 }
 
 #endif
@@ -246,17 +213,10 @@ void main() {
 
 noperspective out vec2 texCoord;
 
-flat out vec3 upVec, sunVec;
+out vec3 sunVec;
 
-#ifdef LIGHTSHAFTS_ACTIVE
-	flat out float vlFactor;
-#endif
-
-//Uniforms//
-#if defined LIGHTSHAFTS_ACTIVE && (LIGHTSHAFT_BEHAVIOUR == 1 && SHADOW_QUALITY >= 1 || defined END)
-	uniform float viewWidth, viewHeight;
-	
-	uniform sampler2D colortex4;
+#ifdef END
+    out float vlFactor;
 #endif
 
 //Attributes//
@@ -269,24 +229,15 @@ flat out vec3 upVec, sunVec;
 
 //Program//
 void main() {
-	gl_Position = ftransform();
+    gl_Position = ftransform();
+    
+    texCoord = (gl_TextureMatrix[0] * gl_MultiTexCoord0).xy;
 
-	texCoord = (gl_TextureMatrix[0] * gl_MultiTexCoord0).xy;
+    sunVec = GetSunVector();
 
-	upVec = normalize(gbufferModelView[1].xyz);
-	sunVec = GetSunVector();
-
-	#ifdef LIGHTSHAFTS_ACTIVE
-		#if LIGHTSHAFT_BEHAVIOUR == 1 && SHADOW_QUALITY >= 1 || defined END
-			vlFactor = texelFetch(colortex4, ivec2(viewWidth-1, viewHeight-1), 0).r;
-		#else
-			#if LIGHTSHAFT_BEHAVIOUR == 2
-				vlFactor = 0.0;
-			#elif LIGHTSHAFT_BEHAVIOUR == 3
-				vlFactor = 1.0;
-			#endif
-		#endif
-	#endif
+    #ifdef END
+        vlFactor = texelFetch(colortex5, ivec2(viewWidth-1, viewHeight-1), 0).a;
+    #endif
 }
 
 #endif

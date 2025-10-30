@@ -7,12 +7,14 @@ float GetStarNoise(vec2 pos) {
 vec2 GetStarCoord(vec3 viewPos, float sphereness) {
     vec3 wpos = normalize((gbufferModelViewInverse * vec4(viewPos * 1000.0, 1.0)).xyz);
     vec3 starCoord = wpos / (wpos.y + length(wpos.xz) * sphereness);
-	vec3 moonPos = vec3(gbufferModelViewInverse * vec4(- sunVec * 70.0, 1.0));
-	vec3 moonCoord = moonPos / (moonPos.y + length(moonPos.xz) * sphereness);
-	return starCoord.xz - moonCoord.xz;
+    starCoord.x += 0.006 * syncedTime;
+    return starCoord.xz;
 }
 
 vec3 GetStars(vec2 starCoord, float VdotU, float VdotS) {
+    #if NIGHT_STAR_AMOUNT == 0
+        return vec3(0.0, 0.0, 0.0);
+    #endif
     if (VdotU < 0.0) return vec3(0.0);
 
     starCoord *= 0.4;
@@ -24,24 +26,23 @@ vec3 GetStars(vec2 starCoord, float VdotU, float VdotS) {
     star *= GetStarNoise(starCoord.xy+0.1);
     star *= GetStarNoise(starCoord.xy+0.23);
 
-    #if NIGHT_STAR_AMOUNT == 2
-    star -= 0.5;
-    star *= 0.55;
-    #else
-        star -= 0.6;
-        star *= 0.65;
+    #if NIGHT_STAR_AMOUNT == 1
+        star -= 0.82;
+        star *= 2.0;
+    #elif NIGHT_STAR_AMOUNT == 2
+        star -= 0.7;
+    #elif NIGHT_STAR_AMOUNT == 3
+        star -= 0.62;
+        star *= 0.75;
+    #elif NIGHT_STAR_AMOUNT == 4
+        star -= 0.52;
+        star *= 0.55;
     #endif
     star = max0(star);
     star *= star;
 
-	float starFogFactor = min1(VdotU * 3.0);
-    star *= starFogFactor * (1.0 - sunVisibility);
-    star *= max0(1.0 - pow(abs(VdotS) * 1.002, 100.0));
+    star *= min1(VdotU * 3.0) * max0(1.0 - pow(abs(VdotS) * 1.002, 100.0)) * 1.3;
+    star *= invRainFactor * pow2(pow2(invNoonFactor2)) * (1.0 - 0.5 * sunVisibility);
 
-    vec3 stars = 40.0 * star * vec3(0.38, 0.4, 0.5) * 2.0;
-    stars *= mix(1.0, invRainFactor, heightRelativeToCloud);
-
-    stars *= clamp(abs(texture2D(noisetex, starCoord + frameTimeCounter * 0.004).r - 0.5) * 10, 0.5, 1.0);
-
-    return stars;
+    return 40.0 * star * vec3(0.38, 0.4, 0.5);
 }

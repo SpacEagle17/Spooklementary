@@ -1,3 +1,5 @@
-smoothnessG = pow2(pow2(color.g)) * 4.0;
-smoothnessG = min1(smoothnessG);
+smoothnessG = pow2(color.g);
+smoothnessG = smoothnessG;
 smoothnessD = smoothnessG;
+
+materialMask = OSIEBCA; // Intense Fresnel

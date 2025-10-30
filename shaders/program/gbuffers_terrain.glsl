@@ -1,6 +1,7 @@
-////////////////////////////////////////
-// Complementary Reimagined by EminGT //
-////////////////////////////////////////
+/////////////////////////////////////
+// Complementary Shaders by EminGT //
+// Spooklementary edit by SpacEagle17
+/////////////////////////////////////
 
 //Common//
 #include "/lib/common.glsl"
@@ -9,87 +10,47 @@
 #ifdef FRAGMENT_SHADER
 
 flat in int mat;
+flat in int blockLightEmission;
 
 in vec2 texCoord;
 in vec2 lmCoord;
 in vec2 signMidCoordPos;
 flat in vec2 absMidCoordPos;
 flat in vec2 midCoord;
-in vec3 blockUV;
-in vec3 atMidBlock;
 
 flat in vec3 upVec, sunVec, northVec, eastVec;
 in vec3 normal;
+in vec3 vertexPos;
+in vec3 atMidBlock;
 
 in vec4 glColorRaw;
 
 #if RAIN_PUDDLES >= 1 || defined GENERATED_NORMALS || defined CUSTOM_PBR
-	flat in vec3 binormal, tangent;
+    flat in vec3 binormal, tangent;
 #endif
 
 #ifdef POM
-	in vec3 viewVector;
+    in vec3 viewVector;
 
-	in vec4 vTexCoordAM;
+    in vec4 vTexCoordAM;
 #endif
 
-//Uniforms//
-uniform int isEyeInWater;
-uniform int frameCounter;
-
-uniform float viewWidth;
-uniform float viewHeight;
-uniform float nightVision;
-
-
-uniform vec3 skyColor;
-uniform vec3 cameraPosition;
-
-uniform mat4 gbufferProjectionInverse;
-uniform mat4 gbufferModelViewInverse;
-uniform mat4 shadowModelView;
-uniform mat4 shadowProjection;
-
-uniform sampler2D tex;
-
-
-#if defined IPBR || defined POM
-	uniform ivec2 atlasSize;
-#endif
-
-#if RAIN_PUDDLES >= 1
-	#if RAIN_PUDDLES < 3
-		uniform float wetness;
-		uniform float inRainy;
-	#else
-		float wetness = 1.0;
-		float inRainy = 1.0;
-	#endif
-#endif
-
-#if SHOW_LIGHT_LEVEL == 1
-	uniform int heldItemId;
-	uniform int heldItemId2;
-#endif
-
-#if HELD_LIGHTING_MODE == 0 && SHOW_LIGHT_LEVEL == 2
-	uniform int heldBlockLightValue;
-	uniform int heldBlockLightValue2;
-#endif
-
-#ifdef CUSTOM_PBR
-	uniform sampler2D normals;
-	uniform sampler2D specular;
-#endif
-
-#ifdef LIGHT_COLORING
-	layout (rgba8) uniform image2D colorimg3;
+#if ANISOTROPIC_FILTER > 0
+    in vec4 spriteBounds;
 #endif
 
 //Pipeline Constants//
+#if COLORED_LIGHTING_INTERNAL > 0
+    #if WORLD_SPACE_REFLECTIONS_INTERNAL == -1
+        const float voxelDistance = 32.0;
+    #else
+        const float voxelDistance = 64.0;
+    #endif
+#endif
 
 //Common Variables//
 float NdotU = dot(normal, upVec);
+float geoNdotU = NdotU;
 float NdotUmax0 = max(NdotU, 0.0);
 float SdotU = dot(sunVec, upVec);
 float sunFactor = SdotU < 0.0 ? clamp(SdotU + 0.375, 0.0, 0.75) / 0.75 : clamp(SdotU + 0.03125, 0.0, 0.0625) / 0.0625;
@@ -103,339 +64,368 @@ float skyLightCheck = 0.0;
 vec4 glColor = glColorRaw;
 
 #ifdef OVERWORLD
-	vec3 lightVec = sunVec * ((timeAngle < 0.5325 || timeAngle > 0.9675) ? 1.0 : -1.0);
+    vec3 lightVec = sunVec * ((timeAngle < 0.5325 || timeAngle > 0.9675) ? 1.0 : -1.0);
 #else
-	vec3 lightVec = sunVec;
+    vec3 lightVec = sunVec;
 #endif
 
 #if RAIN_PUDDLES >= 1 || defined GENERATED_NORMALS || defined CUSTOM_PBR
-	mat3 tbnMatrix = mat3(
-		tangent.x, binormal.x, normal.x,
-		tangent.y, binormal.y, normal.y,
-		tangent.z, binormal.z, normal.z
-	);
+    mat3 tbnMatrix = mat3(
+        tangent.x, binormal.x, normal.x,
+        tangent.y, binormal.y, normal.y,
+        tangent.z, binormal.z, normal.z
+    );
 #endif
 
 //Common Functions//
-void DoFoliageColorTweaks(inout vec3 color, inout vec3 shadowMult, inout float snowMinNdotU, float lViewPos) {
-	float factor = max(80.0 - lViewPos, 0.0);
-	shadowMult *= 1.0 + 0.004 * noonFactor * factor;
+void DoFoliageColorTweaks(inout vec3 color, inout vec3 shadowMult, inout float snowMinNdotU, vec3 viewPos, vec3 nViewPos, float lViewPos, float dither) {
+    float factor = max(80.0 - lViewPos, 0.0);
+    shadowMult *= 1.0 + 0.004 * noonFactor * factor;
 
-	if (signMidCoordPos.x < 0.0) color.rgb *= 1.08;
-	else color.rgb *= 0.93;
+    #if defined IPBR && !defined IPBR_COMPAT_MODE
+        color.rgb *= 0.97 - 0.2 * signMidCoordPos.x;
+    #endif
 
-	#ifdef SNOWY_WORLD
-		if (glColor.g - glColor.b > 0.01)
-			snowMinNdotU = min(pow2(pow2(max0(color.g * 2.0 - color.r - color.b))) * 5.0, 0.1);
-		else
-			snowMinNdotU = min(pow2(pow2(max0(color.g * 2.0 - color.r - color.b))) * 3.0, 0.1) * 0.25;
-	#endif
+    //#define FOLIAGE_ALT_SUBSURFACE
+
+    #ifdef FOLIAGE_ALT_SUBSURFACE
+        float edgeSize = 0.12;
+        float edgeEffectFactor = 0.75;
+
+        vec2 texCoordM = texCoord;
+             texCoordM.y -= edgeSize * dither * absMidCoordPos.y;
+             texCoordM.y = max(texCoordM.y, midCoord.y - absMidCoordPos.y);
+        vec4 colorSample = texture2DLod(tex, texCoordM, 0);
+
+        if (colorSample.a < 0.5) {
+            float edgeFactor = dot(nViewPos, lightVec);
+            shadowMult *= 1.0 + edgeEffectFactor * (1.0 + edgeFactor);
+        }
+
+        shadowMult *= 1.03 + 0.2333 * edgeEffectFactor * (dot(normal, lightVec) - 1.0);
+    #endif
+
+    #ifdef SNOWY_WORLD
+        if (glColor.g - glColor.b > 0.01)
+            snowMinNdotU = min(pow2(pow2(max0(color.g * 2.0 - color.r - color.b))) * 5.0, 0.1);
+        else
+            snowMinNdotU = min(pow2(pow2(max0(color.g * 2.0 - color.r - color.b))) * 3.0, 0.1) * 0.25;
+
+        #ifdef DISTANT_HORIZONS
+            // DH chunks don't have foliage. The border looks too noticeable without this tweak
+            snowMinNdotU = mix(snowMinNdotU, 0.09, smoothstep(far * 0.5, far, lViewPos));
+        #endif
+    #endif
 }
 
 void DoBrightBlockTweaks(vec3 color, float minLight, inout vec3 shadowMult, inout float highlightMult) {
-	float factor = mix(minLight, 1.0, pow2(pow2(color.r)));
-	shadowMult = vec3(factor);
-	highlightMult /= factor;
+    float factor = mix(minLight * 0.5 + 0.5, 1.0, pow2(pow2(color.r)));
+    shadowMult = vec3(factor);
+    highlightMult /= factor;
 }
 
 void DoOceanBlockTweaks(inout float smoothnessD) {
-	smoothnessD *= max0(lmCoord.y - 0.95) * 20.0;
+    smoothnessD *= max0(lmCoord.y - 0.95) * 20.0;
 }
 
 //Includes//
 #include "/lib/util/spaceConversion.glsl"
 #include "/lib/lighting/mainLighting.glsl"
+#include "/lib/util/dither.glsl"
 
 #ifdef TAA
-	#include "/lib/util/jitter.glsl"
+    #include "/lib/antialiasing/jitter.glsl"
 #endif
 
-#if defined GENERATED_NORMALS || defined COATED_TEXTURES
-	#include "/lib/util/miplevel.glsl"
+#if defined GENERATED_NORMALS || defined COATED_TEXTURES || ANISOTROPIC_FILTER > 0 || defined DISTANT_LIGHT_BOKEH
+    #include "/lib/util/miplevel.glsl"
 #endif
 
 #ifdef GENERATED_NORMALS
-	#include "/lib/materials/materialMethods/generatedNormals.glsl"
+    #include "/lib/materials/materialMethods/generatedNormals.glsl"
 #endif
 
 #ifdef COATED_TEXTURES
-	#include "/lib/materials/materialMethods/coatedTextures.glsl"
+    #include "/lib/materials/materialMethods/coatedTextures.glsl"
+#endif
+
+#if IPBR_EMISSIVE_MODE != 1
+    #include "/lib/materials/materialMethods/customEmission.glsl"
 #endif
 
 #ifdef CUSTOM_PBR
-	#include "/lib/materials/materialHandling/customMaterials.glsl"
+    #include "/lib/materials/materialHandling/customMaterials.glsl"
 #endif
 
 #ifdef COLOR_CODED_PROGRAMS
-	#include "/lib/misc/colorCodedPrograms.glsl"
+    #include "/lib/misc/colorCodedPrograms.glsl"
+#endif
+
+#if ANISOTROPIC_FILTER > 0
+    #include "/lib/materials/materialMethods/anisotropicFiltering.glsl"
+#endif
+
+#ifdef PUDDLE_VOXELIZATION
+    #include "/lib/voxelization/puddleVoxelization.glsl"
+#endif
+
+#ifdef SNOWY_WORLD
+    #include "/lib/materials/materialMethods/snowyWorld.glsl"
+#endif
+
+#ifdef DISTANT_LIGHT_BOKEH
+    #include "/lib/misc/distantLightBokeh.glsl"
+#endif
+
+#ifdef EYES
+    #include "/lib/misc/spookyEyes.glsl"
 #endif
 
 //Program//
 void main() {
-	skyLightCheck = pow2(1.0 - min1(lmCoord.y * 2.9 * sunVisibility));
-	vec4 color = texture2D(tex, texCoord);
+    skyLightCheck = pow2(1.0 - min1(lmCoord.y * 2.9 * sunVisibility));
+    #if ANISOTROPIC_FILTER == 0
+        vec4 color = texture2D(tex, texCoord);
+    #else
+        vec4 color = textureAF(tex, texCoord);
+    #endif
 
-	float smoothnessD = 0.0, materialMask = 0.0, skyLightFactor = 0.0;
-	vec3 normalM = normal;
+    float smoothnessD = 0.0, materialMask = 0.0;
 
-	#if !defined POM || !defined POM_ALLOW_CUTOUT
-		if (color.a <= 0.00001) discard;
-	#endif
+    #if !defined POM || !defined POM_ALLOW_CUTOUT
+        if (color.a <= 0.00001) discard; // 6WIR4HT23
+    #endif
 
-	vec3 colorP = color.rgb;
-	color.rgb *= glColor.rgb;
-	
-	vec3 screenPos = vec3(gl_FragCoord.xy / vec2(viewWidth, viewHeight), gl_FragCoord.z);
-	#ifdef TAA
-		vec3 viewPos = ScreenToView(vec3(TAAJitter(screenPos.xy, -0.5), screenPos.z));
-	#else
-		vec3 viewPos = ScreenToView(screenPos);
-	#endif
-	float lViewPos = length(viewPos);
-	vec3 playerPos = ViewToPlayer(viewPos);
+    vec3 colorP = color.rgb;
+    color.rgb *= glColor.rgb;
 
-	vec3 worldPos = playerPos + cameraPosition;
+    vec3 screenPos = vec3(gl_FragCoord.xy / vec2(viewWidth, viewHeight), gl_FragCoord.z);
+    #ifdef TAA
+        vec3 viewPos = ScreenToView(vec3(TAAJitter(screenPos.xy, -0.5), screenPos.z));
+    #else
+        vec3 viewPos = ScreenToView(screenPos);
+    #endif
+    float lViewPos = length(viewPos);
+    vec3 nViewPos = normalize(viewPos);
+    vec3 playerPos = vertexPos;
+    vec3 worldPos = playerPos + cameraPosition;
+    vec3 blockUV = 0.5 - atMidBlock.xyz / 64.0;
 
-	int subsurfaceMode = 0;
-	bool noSmoothLighting = false, noDirectionalShading = false, noVanillaAO = false, centerShadowBias = false, noGeneratedNormals = false;
-	float smoothnessG = 0.0, highlightMult = 1.0, emission = 0.0, noiseFactor = 1.0, snowMinNdotU = 0.0, snowFactor = 1.0, noPuddles = 0.0;
-	vec2 lmCoordM = lmCoord;
-	vec3 shadowMult = vec3(1.0);
+    float dither = Bayer64(gl_FragCoord.xy);
+    #ifdef TAA
+        dither = fract(dither + goldenRatio * mod(float(frameCounter), 3600.0));
+    #endif
 
-	float lavaNoiseIntensity = 1.0;
+    int subsurfaceMode = 0;
+    bool noSmoothLighting = false, noDirectionalShading = false, noVanillaAO = false, centerShadowBias = false, noGeneratedNormals = false, doTileRandomisation = true;
+    float smoothnessG = 0.0, highlightMult = 1.0, emission = 0.0, noiseFactor = 1.0, snowFactor = 1.0, snowMinNdotU = 0.0, noPuddles = 0.0, lavaNoiseIntensity = LAVA_NOISE_INTENSITY * 0.1;
+    vec2 lmCoordM = lmCoord;
+    vec3 normalM = normal, geoNormal = normal, shadowMult = vec3(1.0);
+    vec3 worldGeoNormal = normalize(ViewToPlayer(geoNormal * 10000.0));
+    float purkinjeOverwrite = 0.0;
+    ivec3 fragBlockPos = ivec3(worldPos + 0.0001);
+    float fractLengthDist = ivec3Length(fragBlockPos - cameraPositionBestInt);
 
-	#ifdef EYES
-		vec3 eyes1 = vec3(0.0);
-		vec3 eyes2 = vec3(0.0);
-		float sideRandom = hash13(mod(floor(worldPos + atMidBlock / 64) + frameTimeCounter * 0.00001, vec3(100)));
-		vec3 blockUVM = blockUV;
-		if(step(0.5, sideRandom) > 0.0) { // Randomly make eyes visible only on either the x or z axis
-			blockUVM.x = 0.0;
-		} else {
-			blockUVM.z = 0.0;
-		}
-		float spookyEyesFrequency = EYE_FREQUENCY;
-		float spookyEyesSpeed = EYE_SPEED;
+    #ifdef IPBR
+        vec3 maRecolor = vec3(0.0);
+        #include "/lib/materials/materialHandling/terrainIPBR.glsl"
 
-		float randomEyesTime = 24000 * hash1(worldDay * 3); // Effect happens randomly throughout the day
-		int moreEyesEffect = (int(hash1(worldDay / 2)) % (2 * 24000)) + int(randomEyesTime);
-		if (worldTime > moreEyesEffect && worldTime < moreEyesEffect + 30) { // 30 in ticks - 1.5s, how long the effect will be on
-			spookyEyesFrequency = 20.0; // make eyes appear everywhere
-		}
-		if((blockUVM.x > 0.15 && blockUVM.x < 0.43 || blockUVM.x < 0.85 && blockUVM.x > 0.57 || blockUVM.z > 0.15 && blockUVM.z < 0.43 || blockUVM.z < 0.85 && blockUVM.z > 0.57) && blockUVM.y > 0.42 && blockUVM.y < 0.58 && abs(clamp01(dot(normal, upVec))) < 0.99) eyes1 = vec3(1.0); // Eye Shape 1 Horizontal
-		if((blockUVM.x > 0.65 && blockUVM.x < 0.8 || blockUVM.x < 0.35 && blockUVM.x > 0.2 || blockUVM.z > 0.65 && blockUVM.z < 0.8 || blockUVM.z < 0.35 && blockUVM.z > 0.2) && blockUVM.y > 0.3 && blockUVM.y < 0.7 && abs(clamp01(dot(normal, upVec))) < 0.99) eyes2 = vec3(1.0); // Eye Shape 2 Vertical
-		vec3 spookyEyes = mix(eyes1, eyes2, step(0.75, hash13(mod(floor(worldPos + atMidBlock / 64) + frameTimeCounter * 0.00005, vec3(100))))); // have either eye shape 1 or 2 randomly, the horizontal ones have a 0.75 to 0.25 higher probability of appearing
-		spookyEyes *= vec3(step(1.0075 - spookyEyesFrequency * 0.01, hash13(mod(floor(worldPos + atMidBlock / 64) + frameTimeCounter * 0.0000005 * spookyEyesSpeed, vec3(100))))); // Make them appear randomly and much less
-	#endif
+        #ifdef GENERATED_NORMALS
+            if (!noGeneratedNormals) GenerateNormals(normalM, colorP);
+        #endif
 
-	#ifdef IPBR
-		vec3 maRecolor = vec3(0.0);
-		#include "/lib/materials/materialHandling/terrainMaterials.glsl"
+        #ifdef COATED_TEXTURES
+            CoatTextures(color.rgb, noiseFactor, playerPos, doTileRandomisation);
+        #endif
 
-		#ifdef GENERATED_NORMALS
-			if (!noGeneratedNormals) GenerateNormals(normalM, colorP);
-		#endif
+        #if IPBR_EMISSIVE_MODE != 1
+            emission = GetCustomEmissionForIPBR(color, emission);
+        #endif
+    #else
+        #ifdef CUSTOM_PBR
+            GetCustomMaterials(color, normalM, lmCoordM, NdotU, shadowMult, smoothnessG, smoothnessD, highlightMult, emission, materialMask, viewPos, lViewPos);
+        #endif
 
-		#ifdef COATED_TEXTURES
-			CoatTextures(color.rgb, noiseFactor, playerPos);
-		#endif
-	#else
-		#ifdef CUSTOM_PBR
-			GetCustomMaterials(color, normalM, lmCoordM, NdotU, shadowMult, smoothnessG, smoothnessD, highlightMult, emission, materialMask, viewPos, lViewPos);
-		#endif
+        if (mat == 10001) { // No directional shading
+            noDirectionalShading = true;
+        } else if (mat == 10003 || mat == 10005) { // Grounded Waving Foliage
+            subsurfaceMode = 1, noSmoothLighting = true, noDirectionalShading = true;
+            DoFoliageColorTweaks(color.rgb, shadowMult, snowMinNdotU, viewPos, nViewPos, lViewPos, dither);
+            #ifdef EMISSIVE_BLOOD_MOON_FLOWERS
+                if (mat == 10003 && color.r * 1.2 > color.g) {
+                    #ifndef GBUFFERS_TERRAIN
+                        float skyLightCheck = 1.0 - (eyeBrightnessM * sunVisibility);
+                    #endif
+                    emission = 2.0 * skyLightCheck * getBloodMoon(sunVisibility);
+                }
+            #endif
+        } else if (mat == 10009) { // Leaves
+            #include "/lib/materials/specificMaterials/terrain/leaves.glsl"
+        } else if (mat == 10013) { // Vine
+            subsurfaceMode = 3, centerShadowBias = true; noSmoothLighting = true;
+        } else if (mat == 10015 || mat == 10017) { // Non-waving Foliage
+            subsurfaceMode = 1, noSmoothLighting = true, noDirectionalShading = true;
+        } else if (mat == 10021 || mat == 10023) { // Upper Waving Foliage
+            subsurfaceMode = 1, noSmoothLighting = true, noDirectionalShading = true;
+            DoFoliageColorTweaks(color.rgb, shadowMult, snowMinNdotU, viewPos, nViewPos, lViewPos, dither);
+            #ifdef EMISSIVE_BLOOD_MOON_FLOWERS
+                if (mat == 10023 && color.r * 1.2 > color.g) {
+                    #ifndef GBUFFERS_TERRAIN
+                        float skyLightCheck = 1.0 - (eyeBrightnessM * sunVisibility);
+                    #endif
+                    emission = 2.0 * skyLightCheck * getBloodMoon(sunVisibility);
+                }
+            #endif
+        } else if (mat == 10068 || mat == 10070){ // Lava
+            vec3 previousLavaColor = color.rgb;
+            if (emission < 1.0) emission = max(2.0, emission);
+            vec3 lavaNoiseColor = color.rgb;
+            vec2 lavaPos = (floor(worldPos.xz * 16.0) + worldPos.y * 32.0) * 0.000666;
+            vec2 wind = vec2(frameTimeCounter * 0.012, 0.0);
+            lavaNoiseIntensity *= 0.95;
+            #if LAVA_NOISE_INTENSITY > 0
+                #include "/lib/materials/specificMaterials/terrain/lavaNoise.glsl"
+                color.rgb = lavaNoiseColor;
+            #endif
+            vec3 maxLavaColor = max(previousLavaColor, lavaNoiseColor);
+            vec3 minLavaColor = min(previousLavaColor, lavaNoiseColor);
+            #if RAIN_PUDDLES >= 1
+                noPuddles = 1.0;
+            #endif
+            
+            #include "/lib/materials/specificMaterials/terrain/lavaEdge.glsl"
 
-		if (mat == 10000) { // No directional shading
-			noDirectionalShading = true;
-		} else if (mat == 10003 || mat == 10004) { // Grounded Waving Foliage
-			subsurfaceMode = 1, noSmoothLighting = true, noDirectionalShading = true;
-			DoFoliageColorTweaks(color.rgb, shadowMult, snowMinNdotU, lViewPos);
-			#ifdef EMISSIVE_BLOOD_MOON_FLOWERS
-				if (mat == 10003) { // Flowers+
-					if (color.b > color.g || color.r * 1.3 > color.g) {
-						float flowerEmissionMult = 0.0;
-						if (color.r > max(color.b * 1.15, color.g * 2.5) * 0.95) flowerEmissionMult = 1.0;
-						emission = 2.0 * flowerEmissionMult;
-						emission *= skyLightCheck * getBloodMoon(moonPhase, sunVisibility);
-					}
-				}
-			#endif
-		} else if (mat == 10008) { // Leaves
-			#include "/lib/materials/specificMaterials/terrain/leaves.glsl"
-		} else if (mat == 10012) { // Vine
-			shadowMult = vec3(1.7);
-			centerShadowBias = true;
-		} else if (mat == 10016) { // Non-waving Foliage
-			subsurfaceMode = 1, noSmoothLighting = true, noDirectionalShading = true;
-		} else if (mat == 10020 || mat == 10021) { // Upper Waving Foliage
-			subsurfaceMode = 1, noSmoothLighting = true, noDirectionalShading = true;
-			DoFoliageColorTweaks(color.rgb, shadowMult, snowMinNdotU, lViewPos);
-			#ifdef EMISSIVE_BLOOD_MOON_FLOWERS
-				if (mat == 10021) { // Flowers Upper+
-					if (color.b > color.g || color.r * 1.3 > color.g) {
-						float flowerEmissionMult = 0.0;
-						if (color.r > max(color.b * 1.15, color.g * 2.5) * 0.95) flowerEmissionMult = 1.0;
-						emission = 2.0 * flowerEmissionMult;
-						emission *= skyLightCheck * getBloodMoon(moonPhase, sunVisibility);
-					}
-				}
-			#endif
-		} else if (mat == 10744) { // Cobweb
-			subsurfaceMode = 1, noSmoothLighting = true, noDirectionalShading = true;
-			centerShadowBias = true;
-		} else if (mat == 10396){ // Jack o'Lantern
-			float noiseAdd = hash13(mod(floor(worldPos + atMidBlock / 64) + frameTimeCounter * 0.000001, vec3(100)));
-			emission *= mix(0.0, 1.0, smoothstep(0.2, 0.9, texture2D(noisetex, vec2(frameTimeCounter * 0.025 + noiseAdd)).r));
-		} else if (mat == 10068 || mat == 10069){ // Lava
-			vec2 lavaPos = (floor(worldPos.xz * 16.0) + worldPos.y * 32.0) * 0.000666;
-			vec2 wind = vec2(frameTimeCounter * 0.012, 0.0);
-			lavaNoiseIntensity *= 0.95;
-			#include "/lib/materials/specificMaterials/terrain/lavaNoise.glsl"
-			color.rgb = max(color.rgb, 0.023); // so black spots still have some textures and aren't fully black, currently not working well, texture still 100% black blob
-		}
+            emission *= LAVA_EMISSION;
+        } else if (mat == 10028) { // Modded Light Sources
+            noSmoothLighting = true; noDirectionalShading = true;
+            emission = GetLuminance(color.rgb) * 2.5;
+        } else if (mat == 10396) { // Jack o'Lantern
+            float noiseAdd = hash13(mod(floor(worldPos + atMidBlock / 64) + frameTimeCounter * 0.00001, vec3(100)));
+            emission *= mix(0.0, 1.0, smoothstep(0.2, 0.4, texture2D(noisetex, vec2(frameTimeCounter * 0.03 + noiseAdd)).r));
+        }
 
-		#ifdef SNOWY_WORLD
-		else if (mat == 10132) { // Grass Block:Normal
-			if (glColor.b < 0.999) { // Grass Block:Normal:Grass Part
-				snowMinNdotU = min(pow2(pow2(color.g)) * 1.9, 0.1);
-				color.rgb = color.rgb * 0.5 + 0.5 * (color.rgb / glColor.rgb);
-			}
-		}
-		#endif
+        #ifdef SNOWY_WORLD
+        else if (mat == 10132) { // Grass Block:Normal
+            if (glColor.b < 0.999) { // Grass Block:Normal:Grass Part
+                snowMinNdotU = min(pow2(pow2(color.g)) * 1.9, 0.1);
+                color.rgb = color.rgb * 0.5 + 0.5 * (color.rgb / glColor.rgb);
+            }
+        }
+        #endif
 
-		#ifdef EMISSIVE_BLOOD_MOON_FLOWERS
-			else if (mat == 10733) {
-				if ((color.b > color.g || color.r * 1.3 > color.g) && blockUV.y > 0.4) {
-					float flowerEmissionMult = 0.0;
-					if (color.r > max(color.b * 1.15, color.g * 2.5) * 0.95) flowerEmissionMult = 1.0;
-					emission = 2.0 * flowerEmissionMult;
-					emission *= skyLightCheck * getBloodMoon(moonPhase, sunVisibility);
-				}
-			}
-		#endif
+        else if (lmCoord.x > 0.99999) lmCoordM.x = 0.95;
+    #endif
 
-		else if (lmCoord.x > 0.99999) lmCoordM.x = 0.95;
-	#endif
+    #ifdef SNOWY_WORLD
+        DoSnowyWorld(color, smoothnessG, highlightMult, smoothnessD, emission,
+                     playerPos, lmCoord, snowFactor, snowMinNdotU, NdotU, subsurfaceMode);
+    #endif
 
-	#ifdef SNOWY_WORLD
-		snowFactor *= 1000.0 * max(NdotU - 0.9, snowMinNdotU) * max0(lmCoord.y - 0.9) * (0.9 - clamp(lmCoord.x, 0.8, 0.9));
-		if (snowFactor > 0.0001) {
-			const float packSizeSW = 16.0;
-			vec3 worldPos = playerPos + cameraPosition;
-			vec2 noiseCoord = floor(packSizeSW * worldPos.xz + 0.001) / packSizeSW;
-					noiseCoord += floor(packSizeSW * worldPos.y + 0.001) / packSizeSW;
-			float noiseTexture = dot(vec2(0.25, 0.75), texture2D(noisetex, noiseCoord * 0.45).rg);
-			vec3 snowColor = mix(vec3(0.65, 0.8, 0.85), vec3(1.0, 1.0, 1.0), noiseTexture * 0.75 + 0.125);
+    #if RAIN_PUDDLES >= 1
+        float puddleLightFactor = max0(lmCoord.y * 32.0 - 31.0) * clamp((1.0 - 1.15 * lmCoord.x) * 10.0, 0.0, 1.0);
+        float puddleNormalFactor = pow2(max0(NdotUmax0 - 0.5) * 2.0);
+        float puddleMixer = puddleLightFactor * inRainy * puddleNormalFactor;
+        #if RAIN_PUDDLES < 3
+            float wetnessM = wetness;
+        #else
+            float wetnessM = 1.0;
+        #endif
+        #ifdef PUDDLE_VOXELIZATION
+            vec3 voxelPos = SceneToPuddleVoxel(playerPos);
+            vec3 voxel_sample_pos = clamp01(voxelPos / vec3(puddle_voxelVolumeSize));
+            if (CheckInsidePuddleVoxelVolume(voxelPos)) {
+                noPuddles += texture2D(puddle_sampler, voxel_sample_pos.xz).r;
+            }
+        #endif
+        if (pow2(pow2(wetnessM)) * puddleMixer - noPuddles > 0.00001) {
+            vec2 worldPosXZ = playerPos.xz + cameraPosition.xz;
+            vec2 puddleWind = vec2(frameTimeCounter) * 0.03;
+            #if WATER_STYLE == 1
+                vec2 puddlePosNormal = floor(worldPosXZ * 16.0) * 0.0625;
+            #else
+                vec2 puddlePosNormal = worldPosXZ;
+            #endif
 
-			color.rgb = mix(color.rgb, snowColor + color.rgb * emission * 0.2, snowFactor);
-			smoothnessG = mix(smoothnessG, 0.25 + 0.25 * noiseTexture, snowFactor);
-			highlightMult = mix(highlightMult, 2.0 - subsurfaceMode * 0.666, snowFactor);
-			smoothnessD = mix(smoothnessD, 0.0, snowFactor);
-			emission *= 1.0 - snowFactor * 0.85;
-		}
-	#endif
+            puddlePosNormal *= 0.1;
+            vec2 pNormalCoord1 = puddlePosNormal + vec2(puddleWind.x, puddleWind.y);
+            vec2 pNormalCoord2 = puddlePosNormal + vec2(puddleWind.x * -1.5, puddleWind.y * -1.0);
+            vec3 pNormalNoise1 = texture2DLod(noisetex, pNormalCoord1, 0.0).rgb;
+            vec3 pNormalNoise2 = texture2DLod(noisetex, pNormalCoord2, 0.0).rgb;
+            float pNormalMult = 0.03;
 
-	#if RAIN_PUDDLES >= 1
-		float puddleLightFactor = max0(lmCoord.y * 32.0 - 31.0) * clamp((1.0 - 1.15 * lmCoord.x) * 10.0, 0.0, 1.0);
-		float puddleNormalFactor = pow2(max0(NdotUmax0 - 0.5) * 2.0);
-		puddleNormalFactor *= mix(0.0, 1.0, heightRelativeToCloud);
-		float puddleMixer = puddleLightFactor * inRainy * puddleNormalFactor;
-		if (pow2(pow2(wetness)) * puddleMixer - noPuddles > 0.00001) {
-			vec2 worldPosXZ = playerPos.xz + cameraPosition.xz;
-			vec2 puddleWind = vec2(frameTimeCounter) * 0.03;
-			#if WATER_STYLE == 1
-				vec2 puddlePosNormal = floor(worldPosXZ * 16.0) * 0.0625;
-			#else
-				vec2 puddlePosNormal = worldPosXZ;
-			#endif
+            vec3 puddleNormal = vec3((pNormalNoise1.xy + pNormalNoise2.xy - vec2(1.0)) * pNormalMult, 1.0);
+            puddleNormal = clamp(normalize(puddleNormal * tbnMatrix), vec3(-1.0), vec3(1.0));
 
-			puddlePosNormal *= 0.1;
-			vec2 pNormalCoord1 = puddlePosNormal + vec2(puddleWind.x, puddleWind.y);
-			vec2 pNormalCoord2 = puddlePosNormal + vec2(puddleWind.x * -1.5, puddleWind.y * -1.0);
-			vec3 pNormalNoise1 = texture2D(noisetex, pNormalCoord1).rgb;
-			vec3 pNormalNoise2 = texture2D(noisetex, pNormalCoord2).rgb;
-			float pNormalMult = 0.03;
-		
-			vec3 puddleNormal = vec3((pNormalNoise1.xy + pNormalNoise2.xy - vec2(1.0)) * pNormalMult, 1.0);
-			puddleNormal = clamp(normalize(puddleNormal * tbnMatrix), vec3(-1.0), vec3(1.0));
+            #if RAIN_PUDDLES == 1 || RAIN_PUDDLES == 3
+                vec2 puddlePosForm = puddlePosNormal * 0.05;
+                float pFormNoise  = texture2DLod(noisetex, puddlePosForm, 0.0).b        * 3.0;
+                      pFormNoise += texture2DLod(noisetex, puddlePosForm * 0.5, 0.0).b  * 5.0;
+                      pFormNoise += texture2DLod(noisetex, puddlePosForm * 0.25, 0.0).b * 8.0;
+                      pFormNoise *= sqrt1(wetnessM) * 0.5625 + 0.4375;
+                      pFormNoise  = clamp(pFormNoise - 7.0, 0.0, 1.0);
+            #else
+                float pFormNoise = wetnessM;
+            #endif
+            puddleMixer *= pFormNoise;
 
-			#if RAIN_PUDDLES == 1 || RAIN_PUDDLES == 3
-				vec2 puddlePosForm = puddlePosNormal * 0.05;
-				float pFormNoise  = texture2D(noisetex, puddlePosForm).b        * 3.0;
-					  pFormNoise += texture2D(noisetex, puddlePosForm * 0.5).b  * 5.0;
-					  pFormNoise += texture2D(noisetex, puddlePosForm * 0.25).b * 8.0;
-					  pFormNoise *= sqrt1(wetness) * 0.5625 + 0.4375;
-					  pFormNoise  = clamp(pFormNoise - 7.0, 0.0, 1.0);
-			#else
-				float pFormNoise = wetness;
-			#endif
-			puddleMixer *= pFormNoise;
+            float puddleSmoothnessG = 0.7 - rainFactor * 0.3;
+            float puddleHighlight = (1.5 - subsurfaceMode * 0.6 * invNoonFactor);
+            smoothnessG = mix(smoothnessG, puddleSmoothnessG, puddleMixer);
+            highlightMult = mix(highlightMult, puddleHighlight, puddleMixer);
+            smoothnessD = mix(smoothnessD, 1.0, sqrt1(puddleMixer));
+            normalM = mix(normalM, puddleNormal, puddleMixer * rainFactor);
+        }
+    #endif
 
-			float puddleSmoothnessG = 0.7 - rainFactor * 0.3;
-			float puddleHighlight = (1.5 - subsurfaceMode * 0.6 * invNoonFactor);
-			smoothnessG = mix(smoothnessG, puddleSmoothnessG, puddleMixer);
-			highlightMult = mix(highlightMult, puddleHighlight, puddleMixer);
-			smoothnessD = mix(smoothnessD, 1.0, sqrt1(puddleMixer));
-			normalM = mix(normalM, puddleNormal, puddleMixer * rainFactor);
-		}
-	#endif
+    #if SHOW_LIGHT_LEVEL > 0
+        #include "/lib/misc/showLightLevels.glsl"
+    #endif
 
-	#if SHOW_LIGHT_LEVEL > 0
-		#include "/lib/misc/showLightLevels.glsl"
-	#endif
-
-	#if BLOOD_MOON > 0
-		ambientColor *= mix(vec3(1.0), vec3(1.0, 0.0, 0.0) * 3.0, getBloodMoon(moonPhase, sunVisibility));
-	#endif
-
-	if (mat != 10068 && mat != 10069) { // Lava
-		float noiseAdd = hash13(mod(floor(worldPos + atMidBlock / 64) + frameTimeCounter * 0.000001, vec3(100)));
-		emission *= mix(clamp(noiseAdd * 1.5, 0.1, 2.0), 1.0, smoothstep(0.1, 0.11, texture2D(noisetex, vec2(frameTimeCounter * 0.008 + noiseAdd)).r));
+    if (mat != 10068 && mat != 10070) { // Lava
+		float noiseAdd = hash13(mod(floor(worldPos + atMidBlock / 64) + frameTimeCounter * 0.0000002, vec3(100)));
+        emission *= mix(clamp(noiseAdd * 1.5, 0.1, 2.0), 1.0, smoothstep(0.01, 0.06, texture2D(noisetex, vec2(frameTimeCounter * 0.007 + noiseAdd)).r));
 	}
 
-	DoLighting(color, shadowMult, playerPos, viewPos, lViewPos, normalM, lmCoordM,
-				noSmoothLighting, noDirectionalShading, noVanillaAO, centerShadowBias,
-				subsurfaceMode, smoothnessG, highlightMult, emission);
+    bool isLightSource = false;
+    if (lmCoord.x > 0.99 || blockLightEmission > 0) { // Mod support for light level 15 (and all light levels with iris 1.7) light sources and blockID set by user
+        isLightSource = true;
+    }
 
-	#ifdef IPBR
-		color.rgb += maRecolor;
-	#endif
+    DoLighting(color, shadowMult, playerPos, viewPos, lViewPos, geoNormal, normalM, dither,
+               worldGeoNormal, lmCoordM, noSmoothLighting, noDirectionalShading, noVanillaAO,
+               centerShadowBias, subsurfaceMode, smoothnessG, highlightMult, emission, purkinjeOverwrite, isLightSource);
 
-	#ifdef EYES
-		vec2 flickerEyeNoise = texture2D(noisetex, vec2(frameTimeCounter * 0.025 + hash13(mod(floor(worldPos + atMidBlock / 64) + frameTimeCounter * 0.000001, vec3(100))))).rb;
-		if (length(playerPos) > 8.0) {
-			vec3 eyesColor = mix(vec3(1.0), vec3(3.0, 0.0, 0.0), vec3(step(1.0 - EYE_RED_PROBABILITY * mix(1.0, 2.0, getBloodMoon(moonPhase, sunVisibility)), hash13(mod(floor(worldPos + atMidBlock / 64) + frameTimeCounter * 0.0000002, vec3(500)))))); // Make Red eyes appear rarely, 7% chance
-			color.rgb += spookyEyes * 3.0 * skyLightCheck * min1(max(flickerEyeNoise.r, flickerEyeNoise.g)) * clamp((1.0 - 1.15 * lmCoord.x) * 10.0, 0.0, 1.0) * eyesColor;
-		}
-	#endif
+    #ifdef DISTANT_HORIZONS
+        if (getDHFadeFactor(playerPos) < dither) {
+            discard;
+        }
+    #endif
 
-	#ifdef PBR_REFLECTIONS
-		#ifdef OVERWORLD
-			skyLightFactor = pow2(max(lmCoord.y - 0.7, 0.0) * 3.33333);
-		#else
-			skyLightFactor = dot(shadowMult, shadowMult) / 3.0;
-		#endif
-	#endif
+    #ifdef IPBR
+        color.rgb += maRecolor;
+    #endif
 
-	#ifdef COLOR_CODED_PROGRAMS
-		ColorCodeProgram(color);
-	#endif
+    #ifdef EYES
+        doSpookyEyes(color.rgb, fractLengthDist, worldGeoNormal, worldPos, blockUV, skyLightCheck, mat);
+    #endif
 
-	int seed = worldDay / 2; // Thanks to Bálint
-	int currTime = (worldDay % 2) * 24000 + worldTime; // Effect happens every 2 minecraft days
-	float randomTime = 24000 * hash1(worldDay * 5); // Effect happens randomly throughout the day
-	int timeWhenItHappens = (int(hash1(seed)) % (2 * 24000)) + int(randomTime);
-	if (currTime > timeWhenItHappens && currTime < timeWhenItHappens + 100) { // 100 in ticks - 5s, how long the effect will be on, aka leaves are gone
-		if (mat == 10008) discard; // disable leaves
-	}
+    if (mat == 10009 && isTimeEventActive(3, 5.0, 1)) discard; // leaves
 
-	/* DRAWBUFFERS:01 */
-	gl_FragData[0] = color;
-	gl_FragData[1] = vec4(smoothnessD, materialMask, skyLightFactor, 1.0);
+    float skyLightFactor = GetSkyLightFactor(lmCoordM, shadowMult);
 
-	#if BLOCK_REFLECT_QUALITY >= 2 && RP_MODE != 0
-		/* DRAWBUFFERS:015 */
-		gl_FragData[2] = vec4(mat3(gbufferModelViewInverse) * normalM, 1.0);
-	#endif
+    #ifdef COLOR_CODED_PROGRAMS
+        ColorCodeProgram(color, mat);
+    #endif
+
+    /* DRAWBUFFERS:069 */
+    gl_FragData[0] = color;
+    gl_FragData[1] = vec4(smoothnessD, materialMask, skyLightFactor, lmCoord.x + clamp01(purkinjeOverwrite) + clamp01(emission));
+    gl_FragData[2] = vec4(lmCoord.y, 0.0, 0.0, 1.0);
+
+    #if BLOCK_REFLECT_QUALITY >= 2 && RP_MODE != 0
+        /* DRAWBUFFERS:0694 */
+        gl_FragData[3] = vec4(mat3(gbufferModelViewInverse) * normalM, 1.0);
+    #endif
 }
 
 #endif
@@ -444,50 +434,42 @@ void main() {
 #ifdef VERTEX_SHADER
 
 flat out int mat;
+flat out int blockLightEmission;
 
 out vec2 texCoord;
 out vec2 lmCoord;
 out vec2 signMidCoordPos;
 flat out vec2 absMidCoordPos;
 flat out vec2 midCoord;
-out vec3 blockUV; // useful to hardcode something to a specific pixel coordinate of a block
-out vec3 atMidBlock;
 
 flat out vec3 upVec, sunVec, northVec, eastVec;
 out vec3 normal;
+out vec3 vertexPos;
+out vec3 atMidBlock;
 
 out vec4 glColorRaw;
 
 #if RAIN_PUDDLES >= 1 || defined GENERATED_NORMALS || defined CUSTOM_PBR
-	flat out vec3 binormal, tangent;
+    flat out vec3 binormal, tangent;
 #endif
 
 #ifdef POM
-	out vec3 viewVector;
+    out vec3 viewVector;
 
-	out vec4 vTexCoordAM;
+    out vec4 vTexCoordAM;
 #endif
 
-//Uniforms//
-#ifdef TAA
-	uniform float viewWidth, viewHeight;
-#endif
-
-#ifdef WAVING_ANYTHING_TERRAIN
-	
-
-	uniform vec3 cameraPosition;
-
-	uniform mat4 gbufferModelViewInverse;
+#if ANISOTROPIC_FILTER > 0
+    out vec4 spriteBounds;
 #endif
 
 //Attributes//
 attribute vec4 mc_Entity;
 attribute vec4 mc_midTexCoord;
-attribute vec3 at_midBlock;
+attribute vec4 at_midBlock;
 
 #if RAIN_PUDDLES >= 1 || defined GENERATED_NORMALS || defined CUSTOM_PBR
-	attribute vec4 at_tangent;
+    attribute vec4 at_tangent;
 #endif
 
 //Common Variables//
@@ -497,81 +479,92 @@ vec4 glColor = vec4(1.0);
 
 //Includes//
 #ifdef TAA
-	#include "/lib/util/jitter.glsl"
+    #include "/lib/antialiasing/jitter.glsl"
 #endif
 
 #ifdef WAVING_ANYTHING_TERRAIN
-	#include "/lib/materials/materialMethods/wavingBlocks.glsl"
+    #include "/lib/materials/materialMethods/wavingBlocks.glsl"
 #endif
 
 //Program//
 void main() {
-	texCoord = (gl_TextureMatrix[0] * gl_MultiTexCoord0).xy;
-	lmCoord  = GetLightMapCoordinates();
-	blockUV = 0.5 - at_midBlock / 64.0;
-	atMidBlock = at_midBlock;
+    texCoord = (gl_TextureMatrix[0] * gl_MultiTexCoord0).xy;
+    lmCoord  = GetLightMapCoordinates();
 
-	glColorRaw = gl_Color;
-	if (glColorRaw.a < 0.1) glColorRaw.a = 1.0;
-	glColor = glColorRaw;
+    glColorRaw = gl_Color;
+    if (glColorRaw.a < 0.1) glColorRaw.a = 1.0;
+    glColor = glColorRaw;
 
-	normal = normalize(gl_NormalMatrix * gl_Normal);
-	upVec = normalize(gbufferModelView[1].xyz);
-	eastVec = normalize(gbufferModelView[0].xyz);
-	northVec = normalize(gbufferModelView[2].xyz);
-	sunVec = GetSunVector();
+    normal = normalize(gl_NormalMatrix * gl_Normal);
+    upVec = normalize(gbufferModelView[1].xyz);
+    eastVec = normalize(gbufferModelView[0].xyz);
+    northVec = normalize(gbufferModelView[2].xyz);
+    sunVec = GetSunVector();
 
-	midCoord = (gl_TextureMatrix[0] * mc_midTexCoord).st;
-	vec2 texMinMidCoord = texCoord - midCoord;
-	signMidCoordPos = sign(texMinMidCoord);
-	absMidCoordPos  = abs(texMinMidCoord);
+    midCoord = (gl_TextureMatrix[0] * mc_midTexCoord).st;
+    vec2 texMinMidCoord = texCoord - midCoord;
+    signMidCoordPos = sign(texMinMidCoord);
+    absMidCoordPos  = abs(texMinMidCoord);
+    atMidBlock = at_midBlock.xyz;
 
-	mat = int(mc_Entity.x + 0.5);
+    mat = int(mc_Entity.x + 0.5);
+    blockLightEmission = 0;
+    #ifdef IRIS_FEATURE_BLOCK_EMISSION_ATTRIBUTE
+        blockLightEmission = clamp(int(at_midBlock.w + 0.5), 0, 15);
+    #endif
 
-	#ifdef WAVING_ANYTHING_TERRAIN
-		vec4 position = gbufferModelViewInverse * gl_ModelViewMatrix * gl_Vertex;
+    #if ANISOTROPIC_FILTER > 0
+        if (mc_Entity.y > 0.5 && dot(normal, upVec) < 0.999) absMidCoordPos = vec2(0.0); // Fix257062
+    #endif
 
-		DoWave(position.xyz, mat);
+    vec4 position = gbufferModelViewInverse * gl_ModelViewMatrix * gl_Vertex;
+    vertexPos = position.xyz;
 
-		#ifdef FLICKERING_FIX
-			//position.y += max0(0.002 - abs(mat - 10256.0)); // Iron Bars
-		#endif
+    #ifdef WAVING_ANYTHING_TERRAIN
+        DoWave(position.xyz, mat);
+    #endif
 
-		gl_Position = gl_ProjectionMatrix * gbufferModelView * position;
-	#else
-		gl_Position = ftransform();
+    if (mat == 10003 || mat == 10005 || mat == 10015 || mat == 10021 || mat == 10023 || mat == 10629 || mat == 10632 || mat == 10972) {
+        vec3 playerPosM = position.xyz + relativeEyePosition;
+        DoInteractiveWave(playerPosM, mat);
+        position.xyz = playerPosM - relativeEyePosition;
+    }
 
-		#ifndef WAVING_LAVA
-			// G8FL735 Fixes Optifine-Iris parity. Optifine has 0.9 gl_Color.rgb on a lot of versions
-			glColorRaw.rgb = min(glColorRaw.rgb, vec3(0.9));
-		#endif
-	
-		#ifdef FLICKERING_FIX
-			//if (mat == 10256) gl_Position.z -= 0.00001; // Iron Bars
-		#endif
-	#endif
+    gl_Position = gl_ProjectionMatrix * gbufferModelView * position;
 
-	#ifdef TAA
-		gl_Position.xy = TAAJitter(gl_Position.xy, gl_Position.w);
-	#endif
 
-	#if RAIN_PUDDLES >= 1 || defined GENERATED_NORMALS || defined CUSTOM_PBR
-		binormal = normalize(gl_NormalMatrix * cross(at_tangent.xyz, gl_Normal.xyz) * at_tangent.w);
-		tangent  = normalize(gl_NormalMatrix * at_tangent.xyz);
-	#endif
+    #ifdef FLICKERING_FIX
+        if (mat == 10257) gl_Position.z -= 0.00001; // Iron Bars
+    #endif
 
-	#ifdef POM
-		mat3 tbnMatrix = mat3(
-			tangent.x, binormal.x, normal.x,
-			tangent.y, binormal.y, normal.y,
-			tangent.z, binormal.z, normal.z
-		);
+    #ifdef TAA
+        gl_Position.xy = TAAJitter(gl_Position.xy, gl_Position.w);
+    #endif
 
-		viewVector = tbnMatrix * (gl_ModelViewMatrix * gl_Vertex).xyz;
+    #if RAIN_PUDDLES >= 1 || defined GENERATED_NORMALS || defined CUSTOM_PBR
+        binormal = normalize(gl_NormalMatrix * cross(at_tangent.xyz, gl_Normal.xyz) * at_tangent.w);
+        tangent  = normalize(gl_NormalMatrix * at_tangent.xyz);
+    #endif
 
-		vTexCoordAM.zw  = abs(texMinMidCoord) * 2;
-		vTexCoordAM.xy  = min(texCoord, midCoord - texMinMidCoord);
-	#endif
+    #ifdef POM
+        mat3 tbnMatrix = mat3(
+            tangent.x, binormal.x, normal.x,
+            tangent.y, binormal.y, normal.y,
+            tangent.z, binormal.z, normal.z
+        );
+
+        viewVector = tbnMatrix * (gl_ModelViewMatrix * gl_Vertex).xyz;
+
+        vTexCoordAM.zw  = abs(texMinMidCoord) * 2;
+        vTexCoordAM.xy  = min(texCoord, midCoord - texMinMidCoord);
+    #endif
+
+    #if ANISOTROPIC_FILTER > 0
+        vec2 spriteRadius = abs(texCoord - mc_midTexCoord.xy);
+        vec2 bottomLeft = mc_midTexCoord.xy - spriteRadius;
+        vec2 topRight = mc_midTexCoord.xy + spriteRadius;
+        spriteBounds = vec4(bottomLeft, topRight);
+    #endif
 }
 
 #endif

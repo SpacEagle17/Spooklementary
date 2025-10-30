@@ -1,6 +1,7 @@
-////////////////////////////////////////
-// Complementary Reimagined by EminGT //
-////////////////////////////////////////
+/////////////////////////////////////
+// Complementary Shaders by EminGT //
+// Spooklementary edit by SpacEagle17
+/////////////////////////////////////
 
 //Common//
 #include "/lib/common.glsl"
@@ -12,9 +13,6 @@ in vec2 texCoord;
 
 in vec4 glColor;
 
-//Uniforms//
-uniform sampler2D tex;
-
 //Pipeline Constants//
 
 //Common Variables//
@@ -23,28 +21,28 @@ uniform sampler2D tex;
 
 //Includes//
 #ifdef COLOR_CODED_PROGRAMS
-	#include "/lib/misc/colorCodedPrograms.glsl"
+    #include "/lib/misc/colorCodedPrograms.glsl"
 #endif
 
 //Program//
 void main() {
-	vec4 color = texture2D(tex, texCoord) * glColor;
+    vec4 color = texture2D(tex, texCoord) * glColor;
 
-	#ifdef IPBR
-		if (CheckForColor(color.rgb, vec3(224, 121, 250))) { // Enderman Eye Edges
-			color.rgb = vec3(0.8, 0.25, 0.8);
-		}
-	#endif
+    color.rgb = pow1_5(color.rgb) * (
+        1.5
+        + vec3(4.1, 3.0, 4.1) * max0(color.r * color.b - color.g) // Tweak for Enderman
+        + 5.0 * max0(color.g * color.b - color.r) // Tweak for Warden
+        - 0.5 * sqrt(color.r * color.g * color.b) // Tweak for Breeze
+        - vec3(0.0, 0.7, 0.7) * max0(color.r * color.g - color.b) // Tweak for Copper Golem
+    );
 
-	color.rgb = pow1_5(color.rgb);
-	color.rgb *= pow2(1.0 + color.b + 0.5 * color.g) * 1.5;
+    #ifdef COLOR_CODED_PROGRAMS
+        ColorCodeProgram(color, -1);
+    #endif
 
-	#ifdef COLOR_CODED_PROGRAMS
-		ColorCodeProgram(color);
-	#endif
-
-	/* DRAWBUFFERS:0 */
-	gl_FragData[0] = color;
+    /* DRAWBUFFERS:06 */
+    gl_FragData[0] = color;
+    gl_FragData[1] = vec4(0, 0, 0, 1);
 }
 
 #endif
@@ -56,8 +54,6 @@ out vec2 texCoord;
 
 out vec4 glColor;
 
-//Uniforms//
-
 //Attributes//
 
 //Common Variables//
@@ -68,11 +64,11 @@ out vec4 glColor;
 
 //Program//
 void main() {
-	gl_Position = ftransform();
+    gl_Position = ftransform();
 
-	texCoord = (gl_TextureMatrix[0] * gl_MultiTexCoord0).xy;
+    texCoord = (gl_TextureMatrix[0] * gl_MultiTexCoord0).xy;
 
-	glColor = gl_Color;
+    glColor = gl_Color;
 }
 
 #endif

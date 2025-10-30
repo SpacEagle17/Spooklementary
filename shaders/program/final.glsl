@@ -1,6 +1,7 @@
-////////////////////////////////////////
-// Complementary Reimagined by EminGT //
-////////////////////////////////////////
+/////////////////////////////////////
+// Complementary Shaders by EminGT //
+// Spooklementary edit by SpacEagle17
+/////////////////////////////////////
 
 //Common//
 #include "/lib/common.glsl"
@@ -10,173 +11,184 @@
 
 noperspective in vec2 texCoord;
 
-//Uniforms//
-uniform float viewWidth, viewHeight;
-
-#ifndef LIGHT_COLORING
-	uniform sampler2D colortex3;
-#else
-	uniform sampler2D colortex3; /*test*//*test*//*test*//*test*/
-	uniform sampler2D colortex8;
-#endif
-
-#ifdef UNDERWATER_DISTORTION
-	uniform int isEyeInWater;
-
-	
-#endif
-
-uniform float playerMood;
-
 //Pipeline Constants//
 #include "/lib/pipelineSettings.glsl"
 
 //Common Variables//
+vec2 view = vec2(viewWidth, viewHeight);
+
+#if defined MC_ANISOTROPIC_FILTERING || COLORED_LIGHTING > 0 || WORLD_SPACE_REFLECTIONS > 0 && COLORED_LIGHTING == 0
+    #define ANY_ERROR_MESSAGE
+#endif
+
+#ifdef MC_ANISOTROPIC_FILTERING
+    #define OPTIFINE_AF_ERROR
+#endif
+
+#if COLORED_LIGHTING > 0 && !defined IS_IRIS
+    #define OPTIFINE_ACT_ERROR
+#endif
+
+#if COLORED_LIGHTING > 0 && defined MC_OS_MAC
+    #define APPLE_ACT_ERROR
+#endif
+
+#if COLORED_LIGHTING > 0
+    #define COORDINATES_ACT_ERROR
+    #define SHADOWDISTANCE_ACT_ERROR
+#endif
+
+#if WORLD_SPACE_REFLECTIONS > 0 && COLORED_LIGHTING == 0
+    #define WSR_MISSING_ACT_ERROR
+#endif
 
 //Common Functions//
 #if IMAGE_SHARPENING > 0
-	vec2 viewD = 1.0 / vec2(viewWidth, viewHeight);
+    vec2 viewD = 1.0 / vec2(viewWidth, viewHeight);
 
-	vec2 sharpenOffsets[4] = vec2[4](
-		vec2( viewD.x,  0.0),
-		vec2( 0.0,  viewD.x),
-		vec2(-viewD.x,  0.0),
-		vec2( 0.0, -viewD.x)
-	);
+    vec2 sharpenOffsets[4] = vec2[4](
+        vec2( viewD.x,  0.0),
+        vec2( 0.0,  viewD.x),
+        vec2(-viewD.x,  0.0),
+        vec2( 0.0, -viewD.x)
+    );
 
-	void SharpenImage(inout vec3 color, vec2 texCoordM) {
-		float mult = 0.0125 * IMAGE_SHARPENING;
-		color *= 1.0 + 0.05 * IMAGE_SHARPENING;
+    void SharpenImage(inout vec3 color, vec2 texCoordM) {
+        #ifdef TAA
+            float sharpenMult = IMAGE_SHARPENING;
+        #else
+            float sharpenMult = IMAGE_SHARPENING * 0.5;
+        #endif
+        float mult = 0.0125 * sharpenMult;
+        color *= 1.0 + 0.05 * sharpenMult;
 
-		for (int i = 0; i < 4; i++) {
-			#ifndef LIGHT_COLORING
-				color -= texture2D(colortex3, texCoordM + sharpenOffsets[i]).rgb * mult;
-			#else
-				color -= texture2D(colortex8, texCoordM + sharpenOffsets[i]).rgb * mult;
-			#endif
-		}
-	}
+        for (int i = 0; i < 4; i++) {
+            color -= texture2D(colortex3, texCoordM + sharpenOffsets[i]).rgb * mult;
+        }
+    }
 #endif
 
 float retroNoise (vec2 noise){
 	return fract(sin(dot(noise.xy,vec2(10.998,98.233)))*12433.14159265359);
 }
 
-//Includes//
-#ifdef MC_ANISOTROPIC_FILTERING
-	#include "/lib/util/textRendering.glsl"
+#define ANY_ERROR_MESSAGE
 
-	void beginTextM(int textSize, vec2 offset) {
-		beginText(ivec2(vec2(viewWidth, viewHeight) * texCoord) / textSize, ivec2(0 + offset.x, viewHeight / textSize - offset.y));
-		text.bgCol = vec4(0.0);
-	}
+//Includes//
+#ifdef ANY_ERROR_MESSAGE
+    #include "/lib/textRendering/textRenderer.glsl"
+
+    void beginTextM(int textSize, vec2 offset) {
+        float scale = 860;
+        beginText(ivec2(vec2(scale * viewWidth / viewHeight, scale) * texCoord) / textSize, ivec2(0 + offset.x, scale / textSize - offset.y));
+        text.bgCol = vec4(0.0);
+    }
 #endif
 
 //Program//
 void main() {
-	vec2 texCoordM = texCoord;
+    vec2 texCoordM = texCoord;
 
-	float randomShutterTime = 24000 * hash1(worldDay * 5); // Effect happens randomly throughout the day
-	int displaceEffect = (int(hash1(worldDay / 2)) % (2 * 24000)) + int(randomShutterTime);
-	if (worldTime > displaceEffect && worldTime < displaceEffect + 100) { // 100 in ticks - 5s, how long the effect will be on
-		float scrollSpeed = 2.0;
-		float stutterSpeed = 0.2;
-		float scroll   = (1.0 - step(retroNoise(vec2(frameTimeCounter * 0.00002, 8.0)), 0.9)) * scrollSpeed;
-		float stutter  = (1.0 - step(retroNoise(vec2(frameTimeCounter * 0.00005, 9.0)), 0.8)) * stutterSpeed;
-		float stutter2 = (1.0 - step(retroNoise(vec2(frameTimeCounter * 0.00003, 5.0)), 0.7)) * stutterSpeed;
-		float verticalOffset = sin(frameTimeCounter) * scroll + stutter * stutter2;
-		texCoordM.y = mod(texCoordM.y + verticalOffset, 1.10);
-	}
-	
-	#ifdef UNDERWATER_DISTORTION
-		if (isEyeInWater == 1)
-			texCoordM += WATER_REFRACTION_INTENSITY * 0.00035 * sin((texCoord.x + texCoord.y) * 25.0 + frameTimeCounter * 3.0);
-	#endif
 
-	#ifndef LIGHT_COLORING
-		vec3 color = texture2D(colortex3, texCoordM).rgb;
-	#else
-		vec3 color = texture2D(colortex8, texCoordM).rgb;
-	#endif
+    if (isTimeEventActive(5, 7, 3)) { // screen random scrolling up and down and stuttering
+        float scrollSpeed = 2.0;
+        float stutterSpeed = 0.2;
+        float scroll   = (1.0 - step(retroNoise(vec2(frameTimeCounter * 0.00002, 8.0)), 0.9)) * scrollSpeed;
+        float stutter  = (1.0 - step(retroNoise(vec2(frameTimeCounter * 0.00005, 9.0)), 0.8)) * stutterSpeed;
+        float stutter2 = (1.0 - step(retroNoise(vec2(frameTimeCounter * 0.00003, 5.0)), 0.7)) * stutterSpeed;
+        float verticalOffset = sin(frameTimeCounter) * scroll + stutter * stutter2;
+        texCoordM.y = mod(texCoordM.y + verticalOffset, 1.10);
+    }
 
-	vec2 scale = vec2(1.0, viewHeight / viewWidth);
-	vec2 aberration = (texCoordM - 0.5) * (2.0 / vec2(viewWidth, viewHeight)) * scale * max(CHROMA_ABERRATION, playerMood * 10.0);
-	#ifndef LIGHT_COLORING
-		color.rb = vec2(texture2D(colortex3, texCoordM + aberration).r, texture2D(colortex3, texCoordM - aberration).b);
-	#else
-		color.rb = vec2(texture2D(colortex8, texCoordM + aberration).r, texture2D(colortex8, texCoordM - aberration).b);
-	#endif
+    #ifdef UNDERWATER_DISTORTION
+        if (isEyeInWater == 1)
+            texCoordM += WATER_REFRACTION_INTENSITY * 0.00035 * sin((texCoord.x + texCoord.y) * 25.0 + frameTimeCounter * 3.0);
+    #endif
 
-	#if IMAGE_SHARPENING > 0
-		SharpenImage(color, texCoordM);
-	#endif
+    vec3 color = texture2D(colortex3, texCoordM).rgb;
 
-	/*ivec2 boxOffsets[8] = ivec2[8](
-		ivec2( 1, 0),
-		ivec2( 0, 1),
-		ivec2(-1, 0),
-		ivec2( 0,-1),
-		ivec2( 1, 1),
-		ivec2( 1,-1),
-		ivec2(-1, 1),
-		ivec2(-1,-1)
-	);
+    #if CHROMA_ABERRATION > 0 || defined PLAYER_MOOD_EFFECTS && defined OVERWORLD
+        vec2 scale = vec2(1.0, viewHeight / viewWidth);
+        vec2 aberration = (texCoordM - 0.5) * (2.0 / vec2(viewWidth, viewHeight)) * scale * max(CHROMA_ABERRATION, playerMood * 8.5);
+        color.rb = vec2(texture2D(colortex3, texCoordM + aberration).r, texture2D(colortex3, texCoordM - aberration).b);
+    #endif
 
-	for (int i = 0; i < 8; i++) {
-		color = max(color, texelFetch(colortex3, texelCoord + boxOffsets[i], 0).rgb);
-	}*/
+    #if IMAGE_SHARPENING > 0
+        SharpenImage(color, texCoordM);
+    #endif
 
-	#ifdef LIGHT_COLORING
-		if (max(texCoordM.x, texCoordM.y) < 0.25) color = texture2D(colortex3, texCoordM * 4.0).rgb;
-	#endif
+    /*ivec2 boxOffsets[8] = ivec2[8](
+        ivec2( 1, 0),
+        ivec2( 0, 1),
+        ivec2(-1, 0),
+        ivec2( 0,-1),
+        ivec2( 1, 1),
+        ivec2( 1,-1),
+        ivec2(-1, 1),
+        ivec2(-1,-1)
+    );
 
-	#ifdef MC_ANISOTROPIC_FILTERING
-		color.rgb = mix(color.rgb, vec3(0.0), 0.75);
+    for (int i = 0; i < 8; i++) {
+        color = max(color, texelFetch(colortex3, texelCoord + boxOffsets[i], 0).rgb);
+    }*/
 
-		beginTextM(8, vec2(6, 10));
-		text.fgCol = vec4(1.0, 0.0, 0.0, 1.0);
-		printString((_I, _m, _p, _o, _r, _t, _a, _n, _t, _space, _I, _s, _s, _u, _e, _space));
-		endText(color.rgb);
+    #ifdef OPTIFINE_AF_ERROR
+        #include "/lib/textRendering/error_optifine_af.glsl"
+    #elif defined OPTIFINE_ACT_ERROR
+        #include "/lib/textRendering/error_optifine_act.glsl"
+    #elif defined APPLE_ACT_ERROR
+        #include "/lib/textRendering/error_apple_act.glsl"
+    #elif defined WSR_MISSING_ACT_ERROR
+        #include "/lib/textRendering/error_wsr_missing_act.glsl"
+    #else
+        #ifdef COORDINATES_ACT_ERROR
+            ivec2 absCameraPositionIntXZ = abs(cameraPositionInt.xz);
+            if (max(absCameraPositionIntXZ.x, absCameraPositionIntXZ.y) > 8388550) {
+                #include "/lib/textRendering/error_coordinates_act.glsl"
+            }
+        #endif
+        #ifdef SHADOWDISTANCE_ACT_ERROR
+            if (COLORED_LIGHTING_INTERNAL > shadowDistance*2) {
+                #include "/lib/textRendering/error_shadowdistance_act.glsl"
+            }
+        #endif
+    #endif
 
-		beginTextM(4, vec2(15, 30));
-		printLine();
-		text.fgCol = vec4(1.0, 1.0, 1.0, 1.0);
-		printString((
-			_P, _l, _e, _a, _s, _e, _space, _g, _o, _space, _t, _o, _space,
-			_E, _S, _C, _space, _minus, _space, _O, _p, _t, _i, _o, _n, _s, _space, _minus, _space
-		));
-		printLine();
-		printString((
-			_V, _i, _d, _e, _o, _space, _S, _e, _t, _t, _i, _n, _g, _s, _space, _minus, _space,
-			_Q, _u, _a, _l, _i, _t, _y, _space, _minus, _space
-		));
-		printLine();
-		printString((
-			_a, _n, _d, _space, _d, _i, _s, _a, _b, _l, _e, _space,
-			_A, _n, _i, _s, _o, _t, _r, _o, _p, _i, _c, _space, _F, _i, _l, _t, _e, _r, _i, _n, _g, _dot
-		));
-		endText(color.rgb);
-	#endif
+    #ifdef VIGNETTE_R
+        vec2 texCoordMin = texCoordM.xy - 0.5;
+        float vignette = 1.0 - dot(texCoordMin, texCoordMin) * (1.0 - GetLuminance(color));
+        color *= vignette;
+    #endif
 
-	float maxStrength = 0.50;
-	float minStrength = 0.30;
-	const float speed = 10.0;
+    #if defined PLAYER_MOOD_EFFECTS && defined OVERWORLD
+        float maxStaticStrength = 0.50;
+        float minStaticStrength = 0.30;
+        const float staticSpeed = 10.0;
 
-	vec2 fractCoord = fract(texCoord * fract(sin(frameTimeCounter * speed)));
+        vec2 fractStaticCoord = fract(texCoord * fract(sin(frameTimeCounter * staticSpeed)));
 
-	maxStrength = clamp(sin(frameTimeCounter * 0.5), minStrength, maxStrength);
+        maxStaticStrength = clamp(sin(frameTimeCounter * 0.5), minStaticStrength, maxStaticStrength);
 
-	vec3 staticColor = vec3(retroNoise(fractCoord)) * maxStrength;
-	float staticIntensity = 0.0;
-	if (playerMood > 0.9) staticIntensity = (playerMood * 10.0 - 9.0) * 0.75;
-	color *= mix(vec3(1.0), color - staticColor, staticIntensity);
+        vec3 staticColor = vec3(retroNoise(fractStaticCoord)) * maxStaticStrength;
+        float staticIntensity = smoothstep(0.95, 1.0, playerMood) * 0.45;
+        color += mix(vec3(0.0), staticColor, staticIntensity);
+    #endif
 
-	color.rgb = mix(color.rgb, color.rgb * GetLuminance(color), 0.60);
+    float dither = texture2DLod(noisetex, texCoord * view / 128.0, 0.0).b;
+    color += vec3((dither - 0.25) / 128.0);
 
-	//if (gl_FragCoord.x < 479 || gl_FragCoord.x > 1441) color = vec3(0.0);
+    color.rgb = mix(color.rgb, color.rgb * GetLuminance(color), 0.60);
 
-	/* DRAWBUFFERS:0 */
-	gl_FragData[0] = vec4(color, 1.0);
+
+    // beginTextM(2, vec2(5));
+    // text.fpPrecision = 6;
+    // printFloat(fuzzyOr(darknessFactor, (1.0 - eyeBrightnessM)));
+    // endText(color.rgb);
+
+    // color.rgb = mix(color.rgb, vec3(GetLuminance(color)), 0.15);
+
+    /* DRAWBUFFERS:0 */
+    gl_FragData[0] = vec4(color, 1.0);
 }
 
 #endif
@@ -185,8 +197,6 @@ void main() {
 #ifdef VERTEX_SHADER
 
 noperspective out vec2 texCoord;
-
-//Uniforms//
 
 //Attributes//
 
@@ -198,8 +208,8 @@ noperspective out vec2 texCoord;
 
 //Program//
 void main() {
-	gl_Position = ftransform();
-	texCoord = (gl_TextureMatrix[0] * gl_MultiTexCoord0).xy;
+    gl_Position = ftransform();
+    texCoord = (gl_TextureMatrix[0] * gl_MultiTexCoord0).xy;
 }
 
 #endif

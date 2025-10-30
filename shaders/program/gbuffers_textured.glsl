@@ -1,6 +1,7 @@
-////////////////////////////////////////
-// Complementary Reimagined by EminGT //
-////////////////////////////////////////
+/////////////////////////////////////
+// Complementary Shaders by EminGT //
+// Spooklementary edit by SpacEagle17
+/////////////////////////////////////
 
 //Common//
 #include "/lib/common.glsl"
@@ -11,47 +12,10 @@
 in vec2 texCoord;
 in vec2 lmCoord;
 
-flat in vec3 upVec, sunVec;
+flat in vec3 upVec, sunVec, northVec, eastVec;
 in vec3 normal;
 
 flat in vec4 glColor;
-
-#ifdef CLOUD_SHADOWS
-	flat in vec3 eastVec;
-	
-	#if SUN_ANGLE != 0
-		flat in vec3 northVec;
-	#endif
-#endif
-
-//Uniforms//
-uniform int isEyeInWater;
-uniform int frameCounter;
-
-uniform float far;
-uniform float viewWidth;
-uniform float viewHeight;
-uniform float nightVision;
-
-uniform float blindness;
-uniform float darknessFactor;
-
-uniform ivec2 atlasSize;
-
-uniform vec3 skyColor;
-uniform vec3 cameraPosition;
-
-uniform mat4 gbufferProjectionInverse;
-uniform mat4 gbufferModelViewInverse;
-uniform mat4 shadowModelView;
-uniform mat4 shadowProjection;
-
-uniform sampler2D tex;
-
-
-#ifdef VL_CLOUDS_ACTIVE
-	uniform sampler2D gaux1;
-#endif
 
 //Pipeline Constants//
 
@@ -67,9 +31,9 @@ float shadowTimeVar2 = shadowTimeVar1 * shadowTimeVar1;
 float shadowTime = shadowTimeVar2 * shadowTimeVar2;
 
 #ifdef OVERWORLD
-	vec3 lightVec = sunVec * ((timeAngle < 0.5325 || timeAngle > 0.9675) ? 1.0 : -1.0);
+    vec3 lightVec = sunVec * ((timeAngle < 0.5325 || timeAngle > 0.9675) ? 1.0 : -1.0);
 #else
-	vec3 lightVec = sunVec;
+    vec3 lightVec = sunVec;
 #endif
 
 //Common Functions//
@@ -80,137 +44,143 @@ float shadowTime = shadowTimeVar2 * shadowTimeVar2;
 #include "/lib/util/dither.glsl"
 
 #if MC_VERSION >= 11500
-	#include "/lib/atmospherics/fog/mainFog.glsl"
+    #include "/lib/atmospherics/fog/mainFog.glsl"
 #endif
 
-#include "/lib/colors/colorMultipliers.glsl"
+#ifdef ATM_COLOR_MULTS
+    #include "/lib/colors/colorMultipliers.glsl"
+#endif
 
 #ifdef COLOR_CODED_PROGRAMS
-	#include "/lib/misc/colorCodedPrograms.glsl"
+    #include "/lib/misc/colorCodedPrograms.glsl"
 #endif
 
 //Program//
 void main() {
-	vec4 color = texture2D(tex, texCoord);
-	vec4 colorP = color;
-	color *= glColor;
+    vec4 color = texture2D(tex, texCoord);
+    vec4 colorP = color;
+    color *= glColor;
 
-	vec3 screenPos = vec3(gl_FragCoord.xy / vec2(viewWidth, viewHeight), gl_FragCoord.z);
-	vec3 viewPos = ScreenToView(screenPos);
-	float lViewPos = length(viewPos);
+    vec3 screenPos = vec3(gl_FragCoord.xy / vec2(viewWidth, viewHeight), gl_FragCoord.z);
+    vec3 viewPos = ScreenToView(screenPos);
+    float lViewPos = length(viewPos);
     vec3 playerPos = ViewToPlayer(viewPos);
-	
-	float dither = Bayer64(gl_FragCoord.xy);
-	#ifdef TAA
-		dither = fract(dither + 1.61803398875 * mod(float(frameCounter), 3600.0));
-	#endif
 
-	atmColorMult = GetAtmColorMult();
+    float dither = texture2DLod(noisetex, gl_FragCoord.xy / 128.0, 0.0).b;
+    #ifdef TAA
+        dither = fract(dither + goldenRatio * mod(float(frameCounter), 3600.0));
+    #endif
 
-	#ifdef REDUCE_CLOSE_PARTICLES
-		if (lViewPos - dither - 1.0 < 0.0) discard;
-	#endif
+    #ifdef ATM_COLOR_MULTS
+        atmColorMult = GetAtmColorMult();
+    #endif
 
-	#ifdef VL_CLOUDS_ACTIVE
-		float cloudLinearDepth = texelFetch(gaux1, texelCoord, 0).r;
+    #ifdef VL_CLOUDS_ACTIVE
+        float cloudLinearDepth = texelFetch(gaux2, texelCoord, 0).a;
 
-		if (cloudLinearDepth > 0.0) // Because Iris changes the pipeline position of opaque particles
-		if (pow2(cloudLinearDepth + OSIEBCA * dither) * far < min(lViewPos, far)) discard;
-	#endif
+        if (cloudLinearDepth > 0.0) // Because Iris changes the pipeline position of opaque particles
+        if (pow2(cloudLinearDepth + OSIEBCA * dither) * renderDistance < min(lViewPos, renderDistance)) discard;
+    #endif
 
-	float emission = 0.0, materialMask = OSIEBCA * 254.0; // No SSAO, No TAA
-	vec2 lmCoordM = lmCoord;
-	vec3 shadowMult = vec3(1.0);
-	#ifdef IPBR
-		if (atlasSize.x < 900.0) { // We don't want to detect particles from the block atlas
-			if (color.b > 1.15 * (color.r + color.g) && color.g > color.r * 1.25 && color.g < 0.425 && color.b > 0.75) { // Water Particle
-				color.rgb = sqrt3(color.rgb) * 0.45;
-				if (cameraPosition.y > maximumCloudsHeight) discard;
-			#ifdef OVERWORLD
-			} else if (color.b > 0.7 && color.r < 0.28 && color.g < 0.425 && color.g > color.r * 1.4){ // physics mod rain
-				if (color.a < 0.1 || isEyeInWater == 3) discard;
-				if (cameraPosition.y > maximumCloudsHeight) discard;
-				color.a *= rainTexOpacity;
-				color.rgb = sqrt2(color.rgb) * (blocklightCol * 2.0 * lmCoord.x + ambientColor * lmCoord.y * (0.7 + 0.35 * sunFactor));
-			} else if (color.rgb == vec3(1.0) && color.a < 0.765 && color.a > 0.605) { // physics mod snow (default snow opacity only)
-				if (color.a < 0.1 || isEyeInWater == 3) discard;
-				if (cameraPosition.y > maximumCloudsHeight) discard;
-				color.a *= snowTexOpacity;
-				color.rgb = sqrt2(color.rgb) * (blocklightCol * 2.0 * lmCoord.x + lmCoord.y * (0.7 + 0.35 * sunFactor) + ambientColor * 0.2);
-			#endif
-			} else if (color.r == color.g && color.r - 0.5 * color.b < 0.06) { // Underwater Particle
-				if (isEyeInWater == 1) {
-					color.rgb = sqrt2(color.rgb) * 0.35;
-					if (fract(playerPos.y + cameraPosition.y) > 0.25) discard;
-				}
-			} else if (color.a < 0.99 && dot(color.rgb, color.rgb) < 1.0) { // Campfire Smoke
-				color.a *= 0.5;
-				materialMask = 0.0;
-			} else if (max(abs(colorP.r - colorP.b), abs(colorP.b - colorP.g)) < 0.001) { // Grayscale Particles
-				float dotColor = dot(color.rgb, color.rgb);
-				if (dotColor > 0.25 && color.g < 0.5 && (color.b > color.r * 1.1 && color.r > 0.3 || color.r > (color.g + color.b) * 3.0)) {
-					// Ender Particle, Crying Obsidian Particle, Redstone Particle
-					emission = clamp(color.r * 8.0, 1.6, 5.0);
-					color.rgb = pow1_5(color.rgb);
-					lmCoordM = vec2(0.0);
-				} else if (color.r > 0.83 && color.g > 0.23 && color.b < 0.4) {
-					// Lava Particles
-					emission = 2.0;
-					color.b *= 0.5;
-					color.r *= 1.2;
-				}
-			}
-			//color.rgb = vec3(fract(float(frameCounter) * 0.01), fract(float(frameCounter) * 0.015), fract(float(frameCounter) * 0.02));
-		}
-		bool noSmoothLighting = false;
-	#else
-		if (atlasSize.x < 900.0){
-			if (color.b > 1.15 * (color.r + color.g) && color.g > color.r * 1.25 && color.g < 0.425 && color.b > 0.75) { // Water Particle
-				if (cameraPosition.y > maximumCloudsHeight) discard;
-			}
-			if (color.b > 0.7 && color.r < 0.28 && color.g < 0.425 && color.g > color.r * 1.4){ // physics mod rain
-				if (cameraPosition.y > maximumCloudsHeight) discard;
-				if (color.a < 0.1 || isEyeInWater == 3) discard;
-				color.a *= rainTexOpacity;
-				color.rgb = sqrt2(color.rgb) * (blocklightCol * 2.0 * lmCoord.x + ambientColor * lmCoord.y * (0.7 + 0.35 * sunFactor));
-			} else if (color.rgb == vec3(1.0) && color.a < 0.765 && color.a > 0.605) { // physics mod snow (default snow opacity only)
-				if (cameraPosition.y > maximumCloudsHeight) discard;
-				if (color.a < 0.1 || isEyeInWater == 3) discard;
-				color.a *= snowTexOpacity;
-				color.rgb = sqrt2(color.rgb) * (blocklightCol * 2.0 * lmCoord.x + lmCoord.y * (0.7 + 0.35 * sunFactor) + ambientColor * 0.2);
-			}
-		}
-		bool noSmoothLighting = true;
-	#endif
+    float emission = 0.0, materialMask = OSIEBCA * 254.0; // No SSAO, No TAA
+    vec2 lmCoordM = lmCoord;
+    vec3 normalM = normal, geoNormal = normal, shadowMult = vec3(1.0);
+    vec3 worldGeoNormal = normalize(ViewToPlayer(geoNormal * 10000.0));
+    float purkinjeOverwrite = 0.0;
 
-	#if BLOOD_MOON > 0
-		ambientColor *= mix(vec3(1.0), vec3(1.0, 0.0, 0.0) * 3.0, getBloodMoon(moonPhase, sunVisibility));
-	#endif
+    #if defined IPBR && defined IPBR_PARTICLE_FEATURES
+        // We don't want to detect particles from the block atlas
+        #if MC_VERSION >= 12000
+            float atlasCheck = 1100.0; // I think texture atlas got bigger in newer mc
+        #else
+            float atlasCheck = 900.0;
+        #endif
 
-	DoLighting(color, shadowMult, playerPos, viewPos, lViewPos, normal, lmCoordM,
-	           noSmoothLighting, false, true, false,
-			   0, 0.0, 1.0, emission);
+    if (atlasSize.x < atlasCheck) {
+        if (color.b > 1.15 * (color.r + color.g) && color.g > color.r * 1.25 && color.g < 0.425 && color.b > 0.75) { // Water Particle
+            if (cameraPosition.y > maximumCloudsHeight) discard;
+            materialMask = 0.0;
+            color.rgb = sqrt3(color.rgb);
+            color.rgb *= 0.7;
+            if (dither > 0.4) discard;
+        #ifdef OVERWORLD
+        } else if (color.b > 0.7 && color.r < 0.28 && color.g < 0.425 && color.g > color.r * 1.4){ // physics mod rain
+            if (color.a < 0.1 || isEyeInWater == 3 || cameraPosition.y > maximumCloudsHeight) discard;
+            color.a *= rainTexOpacity;
+            color.rgb = sqrt2(color.rgb) * (blocklightCol * 2.0 * lmCoord.x + ambientColor * lmCoord.y * (0.7 + 0.35 * sunFactor));
+        } else if (color.rgb == vec3(1.0) && color.a < 0.765 && color.a > 0.605) { // physics mod snow (default snow opacity only)
+            if (color.a < 0.1 || isEyeInWater == 3 || cameraPosition.y > maximumCloudsHeight) discard;
+            color.a *= snowTexOpacity;
+            color.rgb = sqrt2(color.rgb) * (blocklightCol * 2.0 * lmCoord.x + lmCoord.y * (0.7 + 0.35 * sunFactor) + ambientColor * 0.2);
+        #endif
+        } else if (color.r == color.g && color.r - 0.5 * color.b < 0.06) { // Underwater Particle
+            if (isEyeInWater == 1) {
+                color.rgb = sqrt2(color.rgb) * 0.35;
+                if (fract(playerPos.y + cameraPosition.y) > 0.25) discard;
+            }
+        } else if (color.a < 0.99 && dot(color.rgb, color.rgb) < 1.0) { // Campfire Smoke
+            color.a *= 0.5;
+            materialMask = 0.0;
+        } else if (max(abs(colorP.r - colorP.b), abs(colorP.b - colorP.g)) < 0.001) { // Grayscale Particles
+            float dotColor = dot(color.rgb, color.rgb);
+            if (dotColor > 0.25 && color.g < 0.5 && (color.b > color.r * 1.1 && color.r > 0.3 || color.r > (color.g + color.b) * 3.0)) {
+                // Ender Particle, Crying Obsidian Particle, Redstone Particle
+                emission = clamp(color.r * 8.0, 1.6, 5.0);
+                color.rgb = pow1_5(color.rgb);
+                lmCoordM = vec2(0.0);
+            } else if (color.r > 0.83 && color.g > 0.23 && color.b < 0.4) {
+                // Lava Particles
+                emission = 2.0;
+                color.b *= 0.5;
+                color.r *= 1.2;
+            }
+        }
+    }
+    bool noSmoothLighting = false;
+    #else
+    bool noSmoothLighting = true;
+    #endif
 
-	#if MC_VERSION >= 11500
-		vec3 nViewPos = normalize(viewPos);
+    #ifdef REDUCE_CLOSE_PARTICLES
+        if (lViewPos - 1.0 < dither) discard;
+    #endif
 
-		float VdotU = dot(nViewPos, upVec);
-		float VdotS = dot(nViewPos, sunVec);
-		float sky = 0.0;
+    #ifdef GLOWING_COLORED_PARTICLES
+        if (atlasSize.x < 900.0) {
+            if (dot(glColor.rgb, vec3(1.0)) < 2.99) {
+                emission = 5.0;
+            }
+        }
+    #endif
 
-		DoFog(color.rgb, sky, lViewPos, playerPos, VdotU, VdotS, dither);
-	#endif
+    bool isLightSource = lmCoord.x > 0.99;
 
-	vec3 translucentMult = mix(vec3(0.666), color.rgb * (1.0 - pow2(pow2(color.a))), color.a);
+    DoLighting(color, shadowMult, playerPos, viewPos, lViewPos, geoNormal, normalM, dither,
+               worldGeoNormal, lmCoordM, noSmoothLighting, false, true,
+               false, 0, 0.0, 1.0, emission, purkinjeOverwrite, isLightSource);
 
-	#ifdef COLOR_CODED_PROGRAMS
-		ColorCodeProgram(color);
-	#endif
-	
-	/* DRAWBUFFERS:013 */
-	gl_FragData[0] = color;
-	gl_FragData[1] = vec4(0.0, materialMask, 0.0, 1.0);
-	gl_FragData[2] = vec4(1.0 - translucentMult, 1.0);
+    #if MC_VERSION >= 11500
+        vec3 nViewPos = normalize(viewPos);
+
+        float VdotU = dot(nViewPos, upVec);
+        float VdotS = dot(nViewPos, sunVec);
+        float sky = 0.0;
+
+        float prevAlpha = color.a;
+        DoFog(color, sky, lViewPos, playerPos, VdotU, VdotS, dither, lmCoordM);
+        color.a = prevAlpha;
+    #endif
+
+    vec3 translucentMult = mix(vec3(0.666), color.rgb * (1.0 - pow2(pow2(color.a))), color.a);
+
+    #ifdef COLOR_CODED_PROGRAMS
+        ColorCodeProgram(color, -1);
+    #endif
+
+    /* DRAWBUFFERS:063 */
+    gl_FragData[0] = color;
+    gl_FragData[1] = vec4(0.0, materialMask, 0.0, lmCoord.x + clamp01(purkinjeOverwrite) + clamp01(emission));
+    gl_FragData[2] = vec4(1.0 - translucentMult, 1.0);
 }
 
 #endif
@@ -221,20 +191,10 @@ void main() {
 out vec2 texCoord;
 out vec2 lmCoord;
 
-flat out vec3 upVec, sunVec;
+flat out vec3 upVec, sunVec, northVec, eastVec;
 out vec3 normal;
 
 flat out vec4 glColor;
-
-#ifdef CLOUD_SHADOWS
-	flat out vec3 eastVec;
-	
-	#if SUN_ANGLE != 0
-		flat out vec3 northVec;
-	#endif
-#endif
-
-//Uniforms//
 
 //Attributes//
 
@@ -246,28 +206,22 @@ flat out vec4 glColor;
 
 //Program//
 void main() {
-	gl_Position = ftransform();
+    gl_Position = ftransform();
 
-	texCoord = (gl_TextureMatrix[0] * gl_MultiTexCoord0).xy;
-	lmCoord  = GetLightMapCoordinates();
+    texCoord = (gl_TextureMatrix[0] * gl_MultiTexCoord0).xy;
+    lmCoord  = GetLightMapCoordinates();
 
-	glColor = gl_Color;
+    glColor = gl_Color;
 
-	normal = normalize(gl_NormalMatrix * gl_Normal);
-	upVec = normalize(gbufferModelView[1].xyz);
-	sunVec = GetSunVector();
-	
-	#ifdef FLICKERING_FIX
-		gl_Position.z -= 0.000002;
-	#endif
+    normal = normalize(gl_NormalMatrix * gl_Normal);
+    upVec = normalize(gbufferModelView[1].xyz);
+    eastVec = normalize(gbufferModelView[0].xyz);
+    northVec = normalize(gbufferModelView[2].xyz);
+    sunVec = GetSunVector();
 
-	#ifdef CLOUD_SHADOWS
-		eastVec = normalize(gbufferModelView[0].xyz);
-	
-		#if SUN_ANGLE != 0
-			northVec = normalize(gbufferModelView[2].xyz);
-		#endif
-	#endif
+    #ifdef FLICKERING_FIX
+        gl_Position.z -= 0.000002;
+    #endif
 }
 
 #endif

@@ -1,22 +1,11 @@
-float Noise3D(vec3 p) {
-    p.z = fract(p.z) * 128.0;
-    float iz = floor(p.z);
-    float fz = fract(p.z);
-    vec2 a_off = vec2(23.0, 29.0) * (iz) / 128.0;
-    vec2 b_off = vec2(23.0, 29.0) * (iz + 1.0) / 128.0;
-    float a = texture2D(noisetex, p.xy + a_off).r;
-    float b = texture2D(noisetex, p.xy + b_off).r;
-    return mix(a, b, fz);
-}
-
-vec4 GetNetherStorm(vec3 color, vec3 translucentMult, vec3 playerPos, vec3 viewPos, float lViewPos, float lViewPos1, float dither) {
+vec4 GetNetherStorm(vec3 color, vec3 translucentMult, vec3 nPlayerPos, vec3 playerPos, float lViewPos, float lViewPos1, float dither) {
+    if (isEyeInWater != 0) return vec4(0.0);
     vec4 netherStorm = vec4(1.0, 1.0, 1.0, 0.0);
-    vec3 nPlayerPos = normalize(playerPos);
 
     #ifdef BORDER_FOG
-        float maxDist = min(far, 256.0); // consistency9023HFUE85JG
+        float maxDist = min(renderDistance, NETHER_VIEW_LIMIT); // consistency9023HFUE85JG
     #else
-        float maxDist = far;
+        float maxDist = renderDistance;
     #endif
 
     #ifndef LOW_QUALITY_NETHER_STORM
@@ -35,7 +24,7 @@ vec4 GetNetherStorm(vec3 color, vec3 translucentMult, vec3 playerPos, vec3 viewP
     #endif
 
     vec3 translucentMultM = pow(translucentMult, vec3(1.0 / sampleCount));
-    
+
     for (int i = 0; i < sampleCount; i++) {
         tracePos += traceAdd;
 
@@ -53,7 +42,7 @@ vec4 GetNetherStorm(vec3 color, vec3 translucentMult, vec3 playerPos, vec3 viewP
         float traceAltitudeM = abs(tracePos.y - NETHER_STORM_LOWER_ALT);
         if (tracePos.y < NETHER_STORM_LOWER_ALT) traceAltitudeM *= 10.0;
         traceAltitudeM = 1.0 - min1(abs(traceAltitudeM) / NETHER_STORM_HEIGHT);
-        
+
         for (int h = 0; h < 4; h++) {
             float stormSample = pow2(Noise3D(tracePosM + wind));
             stormSample *= traceAltitudeM;
@@ -65,14 +54,6 @@ vec4 GetNetherStorm(vec3 color, vec3 translucentMult, vec3 playerPos, vec3 viewP
             wind *= -2.0;
         }
 
-        #ifdef IS_IRIS
-            vec2 lightningAdd = lightningFlashEffect(tracePos - cameraPosition, lightningBoltPosition.xyz, vec3(1.0), 150.0) * lightningBoltPosition.w * 8.0;
-            netherStorm.rgb += lightningAdd.y;
-        #else
-            vec2 lightningAdd = lightningFlashEffect(tracePos - cameraPosition, vec3(0.0, exp(1.0) - 1000.0, 0.0), vec3(1.0), 80.0) * lightningFlashOptifine * 10.0;
-            netherStorm.rgb += lightningAdd.y;
-        #endif
-
         if (lTracePos > lViewPos) netherStorm.rgb *= translucentMultM;
     }
 
@@ -82,7 +63,7 @@ vec4 GetNetherStorm(vec3 color, vec3 translucentMult, vec3 playerPos, vec3 viewP
 
     netherStorm.a = min1(netherStorm.a * NETHER_STORM_I);
 
-    netherStorm.rgb *= netherColor * 3.0;
+    netherStorm.rgb *= netherColor * 3.0 * (1.0 - maxBlindnessDarkness);
 
     //if (netherStorm.a > 0.98) netherStorm.rgb = vec3(1,0,1);
     //netherStorm.a *= 1.0 - max0(netherStorm.a - 0.98) * 50.0;
