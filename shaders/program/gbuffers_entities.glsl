@@ -132,7 +132,7 @@ void main() {
         float smoothnessG = 0.0, highlightMult = 0.0, noiseFactor = 0.75;
 
         if (entityId == 50016 || entityId == 50017) { // Player
-            #include "/lib/materials/specificMaterials/entities/SpacEagle17.glsl"
+            #include "/lib/materials/specificMaterials/others/SpacEagle17.glsl"
         }
 
         #ifdef IPBR

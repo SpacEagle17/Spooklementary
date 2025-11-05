@@ -139,7 +139,9 @@ void main() {
 		}
 	} else { // Light Sources
 		vec4 color = GetSpecialBlocklightColor(int(voxel));
-		light = max(light, vec4(pow2(color.rgb), color.a));
+		float t = clamp((color.a - 0.05) * 4.0, 0.0, 1.0);
+        float alphaScale = mix(1.0, 0.15, t) * 0.2;
+        light = max(light, vec4(pow2(color.rgb), color.a * alphaScale));
 	}
 
 	if (int(framemod2) == 0) {

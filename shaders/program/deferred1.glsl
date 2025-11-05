@@ -202,8 +202,8 @@ void main() {
     float fresnelM = 0.0;
     float linearZ0_DH;
 
-    vec4 texture9 = texelFetch(colortex9, texelCoord, 0);
-    float skyLightFactor = texture9.r;
+    vec3 texture6 = texelFetch(colortex6, texelCoord, 0).rgb;
+    float skyLightFactor = texture6.b;
 
     if (z0 < 1.0) {
         #ifdef DISTANT_LIGHT_BOKEH
@@ -228,7 +228,6 @@ void main() {
             float ssao = 1.0;
         #endif
 
-        vec3 texture6 = texelFetch(colortex6, texelCoord, 0).rgb;
         bool entityOrHand = z0 < 0.56;
         int materialMaskInt = int(texture6.g * 255.1);
         float intenseFresnel = 0.0;

@@ -247,9 +247,9 @@
     #define MOON_PHASE_INF_LIGHT
     //#define MOON_PHASE_INF_ATMOSPHERE
     #define MOON_PHASE_INF_REFLECTION
-    #define MOON_PHASE_FULL 1.20 //[0.01 0.03 0.05 0.07 0.10 0.15 0.20 0.25 0.30 0.35 0.40 0.45 0.50 0.55 0.60 0.65 0.70 0.75 0.80 0.85 0.90 0.95 1.00 1.10 1.20 1.30 1.40 1.50 1.60 1.70 1.80 1.90 2.00]
-    #define MOON_PHASE_PARTIAL 0.80 //[0.01 0.03 0.05 0.07 0.10 0.15 0.20 0.25 0.30 0.35 0.40 0.45 0.50 0.55 0.60 0.65 0.70 0.75 0.80 0.85 0.90 0.95 1.00 1.10 1.20 1.30 1.40 1.50 1.60 1.70 1.80 1.90 2.00]
-    #define MOON_PHASE_DARK 0.55 //[0.01 0.03 0.05 0.07 0.10 0.15 0.20 0.25 0.30 0.35 0.40 0.45 0.50 0.55 0.60 0.65 0.70 0.75 0.80 0.85 0.90 0.95 1.00 1.10 1.20 1.30 1.40 1.50 1.60 1.70 1.80 1.90 2.00]
+    #define MOON_PHASE_FULL 1.30 //[0.01 0.03 0.05 0.07 0.10 0.15 0.20 0.25 0.30 0.35 0.40 0.45 0.50 0.55 0.60 0.65 0.70 0.75 0.80 0.85 0.90 0.95 1.00 1.05 1.10 1.20 1.30 1.40 1.50 1.60 1.70 1.80 1.90 2.00]
+    #define MOON_PHASE_PARTIAL 1.05 //[0.01 0.03 0.05 0.07 0.10 0.15 0.20 0.25 0.30 0.35 0.40 0.45 0.50 0.55 0.60 0.65 0.70 0.75 0.80 0.85 0.90 0.95 1.00 1.05 1.10 1.20 1.30 1.40 1.50 1.60 1.70 1.80 1.90 2.00]
+    #define MOON_PHASE_DARK 0.85 //[0.01 0.03 0.05 0.07 0.10 0.15 0.20 0.25 0.30 0.35 0.40 0.45 0.50 0.55 0.60 0.65 0.70 0.75 0.80 0.85 0.90 0.95 1.00 1.05 1.10 1.20 1.30 1.40 1.50 1.60 1.70 1.80 1.90 2.00]
 
     //#define PIXELATED_SHADOWS
     //#define PIXELATED_BLOCKLIGHT
@@ -698,6 +698,27 @@
       float timeAngle = (tAfrc * (1.0-tAmix) + tAfrs * tAmix + hA) * 0.5;
     #endif
 
+    float cloudHeightM = isnan(cloudHeight) ? 192.0 : cloudHeight; // iris returns "nan" if there are no clouds
+    float cloudHeightOffset = cloudHeightM - 192.0;
+    int cloudAlt1i = int(CLOUD_ALT1 + cloudHeightOffset); // Old setting files can send float values
+    int cloudAlt2i = int(CLOUD_ALT2 + cloudHeightOffset);
+
+    float cloudMaxAdd = 28.0;
+    #if defined DOUBLE_REIM_CLOUDS && defined CLOUDS_REIMAGINED
+        float maximumCloudsHeight = max(cloudAlt1i, cloudAlt2i) + cloudMaxAdd;
+    #elif CLOUD_STYLE_DEFINE == 50
+        float maximumCloudsHeight = cloudHeightM + cloudMaxAdd;
+    #else
+        float maximumCloudsHeight = cloudAlt1i + cloudMaxAdd;
+    #endif
+    float cloudGradientLength = 20.0; // in blocks, probably...
+    float heightRelativeToCloud = clamp(1.0 - (cameraPosition.y - maximumCloudsHeight) / cloudGradientLength, 0.0, 1.0);
+
+    float rainFactor = rainFactorUniform * heightRelativeToCloud;
+
+    float rainFactor2 = rainFactor * rainFactor;
+    float invRainFactor = 1.0 - rainFactor;
+
     #include "/lib/util/commonFunctions.glsl"
 
     #ifndef DISTANT_HORIZONS
@@ -794,27 +815,6 @@
     #ifdef FRAGMENT_SHADER
         ivec2 texelCoord = ivec2(gl_FragCoord.xy);
     #endif
-
-    float cloudHeightM = isnan(cloudHeight) ? 192.0 : cloudHeight; // iris returns "nan" if there are no clouds
-    float cloudHeightOffset = cloudHeightM - 192.0;
-    int cloudAlt1i = int(CLOUD_ALT1 + cloudHeightOffset); // Old setting files can send float values
-    int cloudAlt2i = int(CLOUD_ALT2 + cloudHeightOffset);
-
-    float cloudMaxAdd = 28.0;
-    #if defined DOUBLE_REIM_CLOUDS && defined CLOUDS_REIMAGINED
-        float maximumCloudsHeight = max(cloudAlt1i, cloudAlt2i) + cloudMaxAdd;
-    #elif CLOUD_STYLE_DEFINE == 50
-        float maximumCloudsHeight = cloudHeightM + cloudMaxAdd;
-    #else
-        float maximumCloudsHeight = cloudAlt1i + cloudMaxAdd;
-    #endif
-    float cloudGradientLength = 20.0; // in blocks, probably...
-    float heightRelativeToCloud = clamp(1.0 - (cameraPosition.y - maximumCloudsHeight) / cloudGradientLength, 0.0, 1.0);
-
-    float rainFactor = rainFactorUniform * heightRelativeToCloud;
-
-    float rainFactor2 = rainFactor * rainFactor;
-    float invRainFactor = 1.0 - rainFactor;
 
     float auroraSpookyMix = 0.0;
 

@@ -39,7 +39,7 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
     float nearPlayerOutage = 1.0;
     doPowerOutage(emission, lightmap, worldPos, nearPlayerOutage, false);
 
-    lightmap.x *= 0.85;
+    lightmap.x *= 0.93;
     #ifdef DO_PIXELATION_EFFECTS
         vec2 pixelationOffset = ComputeTexelOffset(tex, texCoord);
 

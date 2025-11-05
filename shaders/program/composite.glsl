@@ -96,7 +96,12 @@ void main() {
         #endif
 
         int materialMaskInt = int(texture6.g * 255.1);
-        float skyLightFactor = texture6.b;
+        #if defined OVERWORLD && WORLD_SPACE_REFLECTIONS_INTERNAL == -1
+            float skyLightFactor = max(texture6.b - 0.7, 0.0) * 3.33333;
+            skyLightFactor *= skyLightFactor;
+        #else
+            float skyLightFactor = texture6.b;
+        #endif
         float smoothnessD = texture6.r;
         float fresnelM = texture4.a;
         float intenseFresnel = 0.0;

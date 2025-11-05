@@ -8,7 +8,6 @@ const int colortex5Format = RGBA8;          //scene image for water reflections 
 const int colortex6Format = RGBA8;          //smoothnessD & materialMask & skyLightFactor & lmCoord.x with purkinje mask
 const int colortex7Format = RGBA16F;        //(cloud/water map on gbuffer) | reflection temporal image (rgb) & previous depth
 const int colortex8Format = RGBA16F;        //SSR results for WSR, topmost translucent opacity
-const int colortex9Format = RGBA16F;        //skylight
 */
 
 const bool colortex0Clear = true;
@@ -20,7 +19,6 @@ const bool colortex5Clear = false;
 const bool colortex6Clear = true;
 const bool colortex7Clear = false;
 const bool colortex8Clear = true;
-const bool colortex9Clear = true;
 //
 
 const int noiseTextureResolution = 128;

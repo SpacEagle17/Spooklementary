@@ -100,9 +100,7 @@ float shadowTime = shadowTimeVar2 * shadowTimeVar2;
 //Program//
 void main() {
     vec4 color = texture2D(tex, texCoord);
-    #ifdef GENERATED_NORMALS
-        vec3 colorP = color.rgb;
-    #endif
+    vec3 colorP = color.rgb;
     color *= glColor;
 
     vec3 screenPos = vec3(gl_FragCoord.xy / vec2(viewWidth, viewHeight), gl_FragCoord.z);
@@ -132,6 +130,10 @@ void main() {
     vec3 normalM = normal, geoNormal = normal, shadowMult = vec3(1.0);
     vec3 worldGeoNormal = normalize(ViewToPlayer(geoNormal * 10000.0));
     float purkinjeOverwrite = 0.0;
+
+    if (blockEntityId == 5017) { // Player Head
+        #include "/lib/materials/specificMaterials/others/SpacEagle17.glsl"
+    }
 
     #ifdef IPBR
         #include "/lib/materials/materialHandling/blockEntityIPBR.glsl"

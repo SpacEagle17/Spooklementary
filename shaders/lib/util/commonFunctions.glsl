@@ -74,12 +74,7 @@ float Noise3D(vec3 p) {
 
 float GetSkyLightFactor(vec2 lmCoordM, vec3 shadowMult) {
     #ifdef OVERWORLD
-        #if WORLD_SPACE_REFLECTIONS_INTERNAL == -1
-            float skyLightFactor = max(lmCoordM.y - 0.7, 0.0) * 3.33333;
-                  skyLightFactor *= skyLightFactor;
-        #else
-            float skyLightFactor = lmCoordM.y;
-        #endif
+        float skyLightFactor = lmCoordM.y;
 
         #if defined GBUFFERS_WATER || defined DH_WATER
             #if SHADOW_QUALITY > -1 && WATER_REFLECT_QUALITY >= 2 && WATER_MAT_QUALITY >= 2
@@ -513,7 +508,7 @@ bool isTimeEventActive(int days, float durationSeconds, int eventId, out float t
     int seed = worldDay / days;
     int currTime = (worldDay % days) * 24000 + worldTime;
     
-    float randomTime = 24000.0 * hash1((worldDay + eventId) * 935);
+    float randomTime = 24000.0 * hash1((worldDay + eventId) * 947);
     int timeWhenItHappens = (int(hash1(seed + eventId)) % (days * 24000)) + int(randomTime);
     int durationTicks = int(durationSeconds * 20.0);
     

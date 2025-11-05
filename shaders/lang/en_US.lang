@@ -64,7 +64,7 @@ value.info11.0=
 option.info11.comment=Spooklementary, by SpacEagle17, is an edit of EminGT's Complementary Shaders. It is a horror themed shaderpack and transforms your game into a moody and spooky experience. Perfect for Halloween or scary maps!
 
 option.info12=§6§nHow to support Spooklementary
-value.info12.0=
+value.info12.0=§6§l§neuphoriapatches.com/support
 option.info12.comment=You can support Spooklementary by being curious about new updates and sharing it with people, but you can also directly support SpacEagle17 on Patreon or Ko-Fi and access Exclusive Beta Versions. §6§l§neuphoriapatches.com/support
 
 option.info13=Thanks for using Spooklementary!
@@ -195,7 +195,7 @@ screen.WORLD_OUTLINE_SETTINGS.comment=Settings that are about optional outline e
 screen.SPOOKY_SETTINGS=§6Spooklementary Settings
 screen.SPOOKY_SETTINGS.comment=Settings that are exclusive to the Spooklementary shaderpack or relate to its features.
 
-screen.AUTHOR_SETTINGS=§6By SpacEagle17 | v2.0
+screen.AUTHOR_SETTINGS=§6By SpacEagle17 | v2.0.2
 
 screen.BLOOD_MOON_SETTINGS=Blood Moon Settings
 screen.BLOOD_MOON_SETTINGS.comment=Settings that are about the Blood Moon effect.
