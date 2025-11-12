@@ -1,11 +1,10 @@
 # <img src="https://cdn-raw.modrinth.com/data/6uJCfiCH/0b4983e0ba8cac6ffe2cc5c2076a8a6b0b28fd1f.png" alt="Spooklementary_logo" width="60" height="auto" /> &nbsp; Spooklementary
 
-&nbsp;
 <a href="https://discord.gg/5N45SAsC3X" target="_blank">
 <img alt="Static Badge" src="https://img.shields.io/badge/discord-white?style=for-the-badge&logo=discord&logoColor=rgb(210%2C%20106%2C%206)&label=join&labelColor=rgb(4%2C%2011%2C%2020)&color=rgb(210%2C%20106%2C%206)">
 </a>
 &nbsp;
-<img alt="Static Badge" src="https://img.shields.io/badge/iris%2C%20optifine%2C%20oculus%20%7C%20MC%201.8.3%20to%20Latest-white?style=for-the-badge&logo=modrinth&label=SUPPORTS&labelColor=rgb(4%2C%2011%2C%2020)&color=rgb(210%2C%20106%2C%206)">
+<img alt="Static Badge" src="https://img.shields.io/badge/iris%2C%20optifine%2C%20oculus%20%7C%201.7.10%20to%20Latest-white?style=for-the-badge&logo=modrinth&label=SUPPORTS&labelColor=rgb(4%2C%2011%2C%2020)&color=rgb(210%2C%20106%2C%206)">
 &nbsp;
 <a href="https://www.patreon.com/SpacEagle17" target="_blank">
 <img alt="Static Badge" src="https://img.shields.io/badge/spaceagle17-white?style=for-the-badge&logo=patreon&logoColor=rgb(210%2C%20106%2C%206)&label=SUPPORT&labelColor=rgb(4%2C%2011%2C%2020)&color=rgb(210%2C%20106%2C%206)&link=https%3A%2F%2Fpatreon.com%2Fspaceagle17">
@@ -20,33 +19,23 @@
 **Important notice: Please don't report any bugs while using this add-on to Emin, but to me instead on [Discord](https://discord.gg/5N45SAsC3X).**
 
 ## Links
-<a href="https://www.patreon.com/SpacEagle17" rel="nofollow">
-<center><img src="https://cdn.modrinth.com/data/cached_images/e51e268636d2f668498b454dfbb7f3049cac4ced.png" alt="Patreon" /></center>
-<br>
-</a>
+<center>
+<div style="text-align: center;" align="center">
+  <a href="https://www.patreon.com/SpacEagle17" rel="nofollow">
+    <img src="https://cdn.modrinth.com/data/cached_images/7f94a4d0b4854a694e1b3dbb5aa8e42fc15bce89.png" alt="Patreon" />
+    <br><br>
+  </a>
+</div>
+</center>
 
 * SpacEagle17's **[<ins>Discord</ins>](https://discord.gg/5N45SAsC3X)** Server for discussion, questions, suggestions...
 * Follow SpacEagle17 on **[<ins>Twitter/X</ins>](https://twitter.com/SpacEagle17)** to get news about the shaderpack
 
-## Features
-<details><summary>Click to Expand</summary>
-<p>
+[![IMAGE ALT TEXT HERE](https://github.com/user-attachments/assets/3882d6dc-a7cd-4f2b-9e11-fc85d65c7d86)](https://www.youtube.com/watch?v=CndrX1R5boQ)
 
-* The whole look of the shaderpack got changed, things are much more desaturated and moody.
-* Blocklight flickers.
-* Eyes randomly appear in dark places. Sometimes they are red.
-* Very rarely strange things can happen such as leaves disappearing (happens VERY rarely).
-* Emissives can flicker from time to time.
-* Lightning bolts light up the surroundings and also the clouds.
-* Lava is more detailed.
-* Jack O' Lanterns have a custom flicker animation
-* There is a lot more fog.
-* Things are much darker. Caves now have a darkness fade.
-* Full moons are blood moons.
-* Chromatic Aberration increases the longer you are in darkness, right before the cave sounds play one might notice some static noise.
-* It no longer rains if above clouds.
-* The screen can very rarely shake.
-* Red flowers are emissive during the blood moon.
-  
-</p>
-</details>
+## Sponsored by Ember Host
+Looking for an affordable and reliable Minecraft server host? Ember Host offers incredible value and top-tier support!
+
+Click the banner or use code **[EUPHORIA](https://www.euphoriapatches.com/ember-referral)** at checkout for **10%** off your first purchase. Plus, **70%** of your purchase supports Euphoria Patches!
+
+<a href="https://www.euphoriapatches.com/ember-referral"><img src=https://cdn.modrinth.com/data/cached_images/545bcc6a4800cae3bace3a58a06e0dab9eccf9e4_0.webp></a>
