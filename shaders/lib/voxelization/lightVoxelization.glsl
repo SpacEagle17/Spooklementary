@@ -28,6 +28,10 @@
     }
 
     uint GetVoxelVolume(ivec3 pos) {
+        return texelFetch(voxel_sampler, pos, 0).x & 32767u;
+    }
+
+    uint GetVoxelVolumeRaw(ivec3 pos) {
         return texelFetch(voxel_sampler, pos, 0).x;
     }
 
@@ -375,14 +379,22 @@
                 }
             #endif
 
-            bool isEligible = any(equal(ivec4(renderStage), ivec4(
-                MC_RENDER_STAGE_TERRAIN_SOLID,
-                MC_RENDER_STAGE_TERRAIN_TRANSLUCENT,
-                MC_RENDER_STAGE_TERRAIN_CUTOUT,
-                MC_RENDER_STAGE_TERRAIN_CUTOUT_MIPPED)));
+            #if defined GBUFFERS_COLORWHEEL || defined SHADOW_COLORWHEEL
+                bool isEligible = true;
+            #else
+                bool isEligible = any(equal(ivec4(renderStage), ivec4(
+                    MC_RENDER_STAGE_TERRAIN_SOLID,
+                    MC_RENDER_STAGE_TERRAIN_TRANSLUCENT,
+                    MC_RENDER_STAGE_TERRAIN_CUTOUT,
+                    MC_RENDER_STAGE_TERRAIN_CUTOUT_MIPPED)));
+            #endif
 
             if (isEligible && CheckInsideVoxelVolume(voxelPos)) {
                 int voxelData = GetVoxelIDs(mat);
+
+                #if defined GBUFFERS_COLORWHEEL || defined SHADOW_COLORWHEEL
+                    voxelData = voxelData | 32768;
+                #endif
                 
                 imageStore(voxel_img, ivec3(voxelPos), uvec4(voxelData, 0u, 0u, 0u));
             }

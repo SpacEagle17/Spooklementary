@@ -119,7 +119,10 @@ void main() {
 	#endif
 
 	vec4 light = vec4(0.0);	
-	uint voxel = GetVoxelVolume(pos);
+
+	uint rawData = GetVoxelVolumeRaw(pos);
+	uint voxel = rawData & 32767u;
+	uint isColorwheelGeometry = (rawData - voxel) >> 15u;
 
 	if (voxel == 1u) { // Solid Blocks
 		light = vec4(0.0);
@@ -139,6 +142,7 @@ void main() {
 		}
 	} else { // Light Sources
 		vec4 color = GetSpecialBlocklightColor(int(voxel));
+		if (isColorwheelGeometry == 1u) color.a = 1.0;
 		float t = clamp((color.a - 0.05) * 4.0, 0.0, 1.0);
         float alphaScale = mix(1.0, 0.15, t) * 0.2;
         light = max(light, vec4(pow2(color.rgb), color.a * alphaScale));

@@ -13,7 +13,11 @@ flat in int mat;
 flat in int blockLightEmission;
 
 in vec2 texCoord;
-in vec2 lmCoord;
+#ifdef GBUFFERS_COLORWHEEL_TRANSLUCENT
+    vec2 lmCoord;
+#else
+    in vec2 lmCoord;
+#endif
 in vec2 signMidCoordPos;
 flat in vec2 absMidCoordPos;
 
@@ -136,7 +140,17 @@ float GetLinearDepth(float depth) {
 //Program//
 void main() {
     vec4 colorP = texture2D(tex, texCoord);
-    vec4 color = colorP * vec4(glColor.rgb, 1.0);
+
+    #ifdef GBUFFERS_COLORWHEEL_TRANSLUCENT
+        float ao;
+        vec4 overlayColor;
+        
+        clrwl_computeFragment(colorP, colorP, lmCoord, ao, overlayColor);
+        vec4 color = mix(colorP, overlayColor, overlayColor.a);
+        lmCoord = clamp((lmCoord - 1.0 / 32.0) * 32.0 / 30.0, 0.0, 1.0);
+    #else
+        vec4 color = colorP * vec4(glColor.rgb, 1.0);
+    #endif
 
     vec3 screenPos = vec3(gl_FragCoord.xy / vec2(viewWidth, viewHeight), gl_FragCoord.z);
     #ifdef TAA
@@ -304,7 +318,11 @@ flat out int mat;
 flat out int blockLightEmission;
 
 out vec2 texCoord;
-out vec2 lmCoord;
+#ifdef GBUFFERS_COLORWHEEL_TRANSLUCENT
+    vec2 lmCoord;
+#else
+    out vec2 lmCoord;
+#endif
 out vec2 signMidCoordPos;
 flat out vec2 absMidCoordPos;
 

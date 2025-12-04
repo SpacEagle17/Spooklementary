@@ -177,7 +177,12 @@ if (mat < 11024) {
                                     vec3 worldPos = playerPos + cameraPosition;
                                     vec3 fractPos = fract(worldPos.xyz);
                                     vec2 coordM = abs(fractPos.xz - 0.5);
-                                    if (max(coordM.x, coordM.y) < 0.375 && fractPos.y > 0.3 && NdotU > 0.9) {
+                                    bool cauldronInteriorCheck = (max(coordM.x, coordM.y) < 0.375 && fractPos.y > 0.3);
+                                    #ifdef GBUFFERS_COLORWHEEL
+                                        vec2 centered = abs(fract(texCoord));
+                                        cauldronInteriorCheck = max(centered.x, centered.y) > 0.9;
+                                    #endif
+                                    if (cauldronInteriorCheck && NdotU > 0.9) {
                                         #if WATER_STYLE < 3
                                             vec3 colorP = color.rgb / glColor.rgb;
                                             smoothnessG = min(pow2(pow2(dot(colorP.rgb, colorP.rgb) * 0.4)), 1.0);
@@ -206,10 +211,12 @@ if (mat < 11024) {
                                     vec3 worldPos = playerPos + cameraPosition;
                                     vec3 fractPos = fract(worldPos.xyz);
                                     vec2 coordM = abs(fractPos.xz - 0.5);
-                                    if (max(coordM.x, coordM.y) < 0.375 &&
-                                        fractPos.y > 0.3 &&
-                                        NdotU > 0.9) {
-
+                                    bool cauldronInteriorCheck = (max(coordM.x, coordM.y) < 0.375 && fractPos.y > 0.3);
+                                    #ifdef GBUFFERS_COLORWHEEL
+                                        vec2 centered = abs(fract(texCoord));
+                                        cauldronInteriorCheck = max(centered.x, centered.y) > 0.9;
+                                    #endif
+                                    if (cauldronInteriorCheck && NdotU > 0.9) {
                                         #include "/lib/materials/specificMaterials/terrain/snow.glsl"
                                     } else {
                                         #include "/lib/materials/specificMaterials/terrain/anvil.glsl"
@@ -223,9 +230,12 @@ if (mat < 11024) {
                                     vec3 worldPos = playerPos + cameraPosition;
                                     vec3 fractPos = fract(worldPos.xyz);
                                     vec2 coordM = abs(fractPos.xz - 0.5);
-                                    if (max(coordM.x, coordM.y) < 0.375 &&
-                                        fractPos.y > 0.3 &&
-                                        NdotU > 0.9) {
+                                    bool cauldronInteriorCheck = (max(coordM.x, coordM.y) < 0.375 && fractPos.y > 0.3);
+                                    #ifdef GBUFFERS_COLORWHEEL
+                                        vec2 centered = abs(fract(texCoord));
+                                        cauldronInteriorCheck = max(centered.x, centered.y) > 0.9;
+                                    #endif
+                                    if (cauldronInteriorCheck && NdotU > 0.9) {
 
                                         #include "/lib/materials/specificMaterials/terrain/lava.glsl"
                                     } else {
@@ -878,9 +888,10 @@ if (mat < 11024) {
 
                                     #if GLOWING_AMETHYST >= 1
                                         #if defined GBUFFERS_TERRAIN && !defined IPBR_COMPAT_MODE
-                                            vec3 worldPos = playerPos.xyz + cameraPosition.xyz;
-                                            vec3 blockPos = abs(fract(worldPos) - vec3(0.5));
-                                            float maxBlockPos = max(blockPos.x, max(blockPos.y, blockPos.z));
+                                            // vec3 worldPos = playerPos.xyz + cameraPosition.xyz;
+                                            // vec3 blockPos = abs(fract(worldPos) - vec3(0.5));
+                                            // float maxBlockPos = max(blockPos.x, max(blockPos.y, blockPos.z));
+                                            float maxBlockPos = maxAll(abs(fract(blockUV) - vec3(0.5))); // change to blockUV to make it work with colorwheel
                                             emission = pow2(max0(1.0 - maxBlockPos * 1.85) * color.g) * 7.0;
 
                                             if (CheckForColor(color.rgb, vec3(254, 203, 230)))
@@ -1408,7 +1419,7 @@ if (mat < 11024) {
                                         color.g *= 0.95;
                                     }
 
-                                    #ifdef GBUFFERS_TERRAIN
+                                    #if defined GBUFFERS_TERRAIN && ! defined GBUFFERS_COLORWHEEL
                                         else { // Directional Self-light Effect
                                             vec3 fractPos = abs(fract(playerPos + cameraPosition) - 0.5);
                                             float maxCoord = max(fractPos.x, max(fractPos.y, fractPos.z));
@@ -1923,6 +1934,9 @@ if (mat < 11024) {
                                 else /*if (mat < 10656)*/ { // Campfire:Lit
                                     #ifdef GBUFFERS_TERRAIN
                                         vec3 fractPos = fract(playerPos + cameraPosition) - 0.5;
+                                        #ifdef GBUFFERS_COLORWHEEL
+                                            fractPos = blockUV - 0.5;
+                                        #endif
                                         lmCoordM.x = pow2(pow2(smoothstep1(1.0 - 0.4 * dot(fractPos.xz, fractPos.xz))));
                                     #endif
 

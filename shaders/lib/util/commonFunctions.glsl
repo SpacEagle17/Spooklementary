@@ -100,6 +100,15 @@ int max0(int x) {
 float max0(float x) {
     return max(x, 0.0);
 }
+float maxAll(vec2 x) {
+    return max(x.x, x.y);
+}
+float maxAll(vec3 x) {
+    return max(x.x, max(x.y, x.z));
+}
+float maxAll(vec4 x) {
+    return max(x.x, max(x.y, max(x.z, x.w)));
+}
 int clamp01(int x) {
     return clamp(x, 0, 1);
 }

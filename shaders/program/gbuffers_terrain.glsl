@@ -13,7 +13,11 @@ flat in int mat;
 flat in int blockLightEmission;
 
 in vec2 texCoord;
-in vec2 lmCoord;
+#ifdef GBUFFERS_COLORWHEEL
+    vec2 lmCoord;
+#else
+    in vec2 lmCoord;
+#endif
 in vec2 signMidCoordPos;
 flat in vec2 absMidCoordPos;
 flat in vec2 midCoord;
@@ -197,7 +201,17 @@ void main() {
     #endif
 
     vec3 colorP = color.rgb;
-    color.rgb *= glColor.rgb;
+
+    #ifdef GBUFFERS_COLORWHEEL
+        float ao;
+        vec4 overlayColor;
+        
+        clrwl_computeFragment(color, color, lmCoord, ao, overlayColor);
+        color.rgb = mix(color.rgb, overlayColor.rgb, overlayColor.a);
+        lmCoord = clamp((lmCoord - 1.0 / 32.0) * 32.0 / 30.0, 0.0, 1.0);
+    #else
+        color.rgb *= glColor.rgb;
+    #endif
 
     vec3 screenPos = vec3(gl_FragCoord.xy / vec2(viewWidth, viewHeight), gl_FragCoord.z);
     #ifdef TAA
@@ -436,7 +450,11 @@ flat out int mat;
 flat out int blockLightEmission;
 
 out vec2 texCoord;
-out vec2 lmCoord;
+#ifdef GBUFFERS_COLORWHEEL
+    vec2 lmCoord;
+#else
+    out vec2 lmCoord;
+#endif
 out vec2 signMidCoordPos;
 flat out vec2 absMidCoordPos;
 flat out vec2 midCoord;

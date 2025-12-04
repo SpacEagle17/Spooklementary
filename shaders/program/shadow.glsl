@@ -47,6 +47,13 @@ void DoNaturalShadowCalculation(inout vec4 color1, inout vec4 color2) {
 //Program//
 void main() {
     vec4 color1 = texture2DLod(tex, texCoord, 0); // Shadow Color
+    #ifdef SHADOW_COLORWHEEL
+        vec2 lmCoord; // needed as otherwise undeclared in the function below
+        float ao;
+        vec4 overlayColor;
+
+        clrwl_computeFragment(color1, color1, lmCoord, ao, overlayColor);
+    #endif
 
     #if SHADOW_QUALITY >= 1
         vec4 color2 = color1; // Light Shaft Color
@@ -184,13 +191,14 @@ void main() {
 
     if (mat == 10009 && isTimeEventActive(3, 5.0, 1)) discard;
 
+    /* DRAWBUFFERS:0 */
     gl_FragData[0] = color1; // Shadow Color
 
     #if SHADOW_QUALITY >= 1
         #if defined LIGHTSHAFTS_ACTIVE && LIGHTSHAFT_BEHAVIOUR == 1 && defined OVERWORLD
             color2.a = 0.25 + max0(positionYM * 0.05); // consistencyMEJHRI7DG
         #endif
-
+        /* DRAWBUFFERS:01 */
         gl_FragData[1] = color2; // Light Shaft Color
     #endif
 }
