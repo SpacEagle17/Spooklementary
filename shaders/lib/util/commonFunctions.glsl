@@ -363,6 +363,7 @@ float getBloodMoon(float sunVisibility) {
         // BLOOD_MOON defines how many nights between blood moons
         // 1 = every night, 2 = every other night, 5 = every 5th night, etc.
         if ((worldDay % BLOOD_MOON) != 0) visibility = 0.0;
+        visibility *= float(min(worldDay, 1)); // no blood moon on day 0
     #endif
     return clamp01(visibility);
 }
@@ -527,7 +528,8 @@ bool isTimeEventActive(int days, float durationSeconds, int eventId, out float t
     // Convert to seconds for animation timing
     timeSinceActivation = float(ticksActive) / 20.0;
     
-    return (currTime > timeWhenItHappens && currTime < timeWhenItHappens + durationTicks);
+    bool isActive = currTime > timeWhenItHappens && currTime < timeWhenItHappens + durationTicks;
+    return isActive && (worldDay > 0); // no random events on day 0
 }
 bool isTimeEventActive(int days, float durationSeconds, int eventId) {
     float dummy;

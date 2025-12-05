@@ -195,7 +195,7 @@ screen.WORLD_OUTLINE_SETTINGS.comment=Settings that are about optional outline e
 screen.SPOOKY_SETTINGS=§6Spooklementary Settings
 screen.SPOOKY_SETTINGS.comment=Settings that are exclusive to the Spooklementary shaderpack or relate to its features.
 
-screen.AUTHOR_SETTINGS=§6By SpacEagle17 | v2.0.3
+screen.AUTHOR_SETTINGS=§6By SpacEagle17 | v2.0.4
 
 screen.BLOOD_MOON_SETTINGS=Blood Moon Settings
 screen.BLOOD_MOON_SETTINGS.comment=Settings that are about the Blood Moon effect.
